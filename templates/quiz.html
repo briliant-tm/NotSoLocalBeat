@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalBeat - Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="glitch-layer"></div>
+    <div id="dynamic-bg"></div>
+    <canvas id="visualizer-canvas"></canvas>
+
+    <script>
+        window.currentUsername = "{{ user.username }}";
+    </script>
+
+    <!-- MULTIPLAYER ROOM INFO -->
+    <div id="multiplayer-info" style="display: none; position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.8); border: 1px solid #333; padding: 15px; max-width: 300px;">
+        <div style="font-size: 0.8rem; color: #888;">ROOM CODE: <span id="room-code-display"></span></div>
+        <div style="margin-top: 10px; max-height: 100px; overflow-y: auto;">
+            <div style="font-size: 0.8rem; color: #888;">PLAYERS:</div>
+            <div id="players-list"></div>
+        </div>
+    </div>
+
+    <!-- COUNTDOWN -->
+    <div id="overlay-countdown">
+        <div class="countdown-number" id="countdown-text">3</div>
+    </div>
+
+    <!-- READY SCREEN (MULTIPLAYER) -->
+    <div id="overlay-ready" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: rgba(0,0,0,0.95); justify-content: center; align-items: center; flex-direction: column; display: none;">
+        <h1 style="font-family: 'Orbitron'; font-size: 3rem;">WAITING FOR PLAYERS</h1>
+        <div id="ready-players" style="margin-top: 30px; font-size: 1.2rem;"></div>
+        <button class="btn-main" id="ready-btn" onclick="toggleReady()" style="margin-top: 30px;">READY UP</button>
+    </div>
+
+    <!-- GAMEOVER -->
+    <div id="overlay-gameover">
+        <h1 style="font-family:'Orbitron'; font-size:4rem;">COMPLETE</h1>
+        <h2 style="font-size:2rem; color:#888;">SCORE: <span id="final-score" style="color:white;">0</span></h2>
+        <div id="final-leaderboard" style="margin-top: 20px; font-size: 0.9rem;"></div>
+        <div style="margin-top:30px; display:flex; gap:20px;">
+            <button class="btn-main" onclick="location.href='/mode'">MENU</button>
+            <button class="btn-main" onclick="location.reload()">RETRY</button>
+        </div>
+    </div>
+
+    <!-- GAME INTERFACE -->
+    <div class="quiz-wrapper">
+        <div class="game-hud">
+            Q: <span id="q-current">1</span>/<span id="q-total">10</span> | SCORE: <span id="score-display">0</span>
+        </div>
+
+        <div class="clue-container">
+            <div class="clue-label">SOURCE DIRECTORY</div>
+            <div class="clue-text" id="clue-text">...</div>
+            <div id="mode-badge" style="background:#333; display:inline-block; padding:5px 10px; font-size:0.8rem;">LOADING</div>
+        </div>
+
+        <div id="game-interface-container" style="width:100%; display:flex; justify-content:center;"></div>
+
+        <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+        </div>
+
+        <div style="margin-top:30px;">
+            <button id="btn-replay" class="btn-main" onclick="triggerReplay()">PLAY (3)</button>
+        </div>
+    </div>
+
+    <audio id="game-audio" crossorigin="anonymous"></audio>
+    <script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
+</body>
+</html>

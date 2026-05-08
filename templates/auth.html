@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalBeat - Autentikasi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="glitch-layer"></div>
+    <div id="dynamic-bg"></div>
+    <canvas id="visualizer-canvas"></canvas>
+
+    <div class="landing-wrapper">
+        <div class="hero-title">LOCALBEAT</div>
+        <div class="hero-subtitle">AUTHENTICATION GATEWAY</div>
+
+        <div class="auth-container">
+            <div class="auth-tabs">
+                <button class="tab-btn active" onclick="switchTab('login')">LOGIN</button>
+                <button class="tab-btn" onclick="switchTab('register')">REGISTER</button>
+                <button class="tab-btn" onclick="switchTab('guest')">GUEST</button>
+            </div>
+
+            <!-- LOGIN TAB -->
+            <div id="tab-login" class="tab-content active">
+                <input type="text" id="login-username" placeholder="Username" class="auth-input">
+                <input type="password" id="login-password" placeholder="Password" class="auth-input">
+                <button class="btn-main" onclick="handleLogin()">LOGIN</button>
+                <div id="login-error" class="error-msg"></div>
+            </div>
+
+            <!-- REGISTER TAB -->
+            <div id="tab-register" class="tab-content">
+                <input type="text" id="reg-username" placeholder="Username" class="auth-input">
+                <input type="email" id="reg-email" placeholder="Email (optional)" class="auth-input">
+                <input type="password" id="reg-password" placeholder="Password (min 6 char)" class="auth-input">
+                <button class="btn-main" onclick="handleRegister()">CREATE ACCOUNT</button>
+                <div id="register-error" class="error-msg"></div>
+            </div>
+
+            <!-- GUEST TAB -->
+            <div id="tab-guest" class="tab-content">
+                <input type="text" id="guest-name" placeholder="Your Name" class="auth-input">
+                <button class="btn-main" onclick="handleGuest()">ENTER AS GUEST</button>
+                <div id="guest-error" class="error-msg"></div>
+            </div>
+
+            <div style="margin-top: 20px; font-size: 0.8rem; color: #666;">
+                LANGUAGE: 
+                <select id="lang-select" onchange="changeLanguage(this.value)" style="background: transparent; border: 1px solid #444; color: white; padding: 5px;">
+                    <option value="en">English</option>
+                    <option value="id">Bahasa Indonesia</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const LANG = {
+            'en': {
+                'LOGIN': 'LOGIN',
+                'REGISTER': 'REGISTER',
+                'GUEST': 'GUEST',
+                'login_placeholder': 'Username',
+                'pass_placeholder': 'Password',
+                'email_placeholder': 'Email (optional)',
+                'pass_min': 'Password (min 6 char)',
+                'register_btn': 'CREATE ACCOUNT',
+                'guest_placeholder': 'Your Name',
+                'guest_btn': 'ENTER AS GUEST',
+                'enter_as_guest': 'ENTER AS GUEST',
+                'login_btn': 'LOGIN',
+                'error_username_short': 'Username at least 3 characters',
+                'error_password_short': 'Password at least 6 characters',
+                'error_name_short': 'Name at least 2 characters',
+                'error_generic': 'An error occurred'
+            },
+            'id': {
+                'LOGIN': 'LOGIN',
+                'REGISTER': 'DAFTAR',
+                'GUEST': 'TAMU',
+                'login_placeholder': 'Nama pengguna',
+                'pass_placeholder': 'Kata sandi',
+                'email_placeholder': 'Email (opsional)',
+                'pass_min': 'Kata sandi (min 6 karakter)',
+                'register_btn': 'BUAT AKUN',
+                'guest_placeholder': 'Nama Anda',
+                'guest_btn': 'MASUK SEBAGAI TAMU',
+                'enter_as_guest': 'MASUK SEBAGAI TAMU',
+                'login_btn': 'LOGIN',
+                'error_username_short': 'Nama pengguna minimal 3 karakter',
+                'error_password_short': 'Kata sandi minimal 6 karakter',
+                'error_name_short': 'Nama minimal 2 karakter',
+                'error_generic': 'Terjadi kesalahan'
+            }
+        };
+
+        let currentLang = localStorage.getItem('lang') || 'en';
+        window.onload = () => {
+            document.getElementById('lang-select').value = currentLang;
+            updateLanguageUI();
+        };
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('lang', lang);
+            updateLanguageUI();
+        }
+
+        function updateLanguageUI() {
+            const l = LANG[currentLang];
+            document.querySelectorAll('.tab-btn')[0].textContent = l.LOGIN;
+            document.querySelectorAll('.tab-btn')[1].textContent = l.REGISTER;
+            document.querySelectorAll('.tab-btn')[2].textContent = l.GUEST;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.error-msg').forEach(el => el.textContent = '');
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+
+            if (!username || !password) {
+                errorDiv.textContent = 'Username dan password harus diisi';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    window.location.href = '/mode';
+                } else {
+                    errorDiv.textContent = data.error || 'Login gagal';
+                }
+            } catch (e) {
+                errorDiv.textContent = 'Koneksi error';
+            }
+        }
+
+        async function handleRegister() {
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const errorDiv = document.getElementById('register-error');
+
+            if (!username || !password) {
+                errorDiv.textContent = 'Username dan password harus diisi';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    window.location.href = '/mode';
+                } else {
+                    errorDiv.textContent = data.error || 'Pendaftaran gagal';
+                }
+            } catch (e) {
+                errorDiv.textContent = 'Koneksi error';
+            }
+        }
+
+        async function handleGuest() {
+            const guestName = document.getElementById('guest-name').value;
+            const errorDiv = document.getElementById('guest-error');
+
+            if (!guestName || guestName.length < 2) {
+                errorDiv.textContent = 'Nama minimal 2 karakter';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/guest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ guest_name: guestName })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    window.location.href = '/mode';
+                } else {
+                    errorDiv.textContent = data.error || 'Guest login gagal';
+                }
+            } catch (e) {
+                errorDiv.textContent = 'Koneksi error';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('login-password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleLogin();
+            });
+            document.getElementById('reg-password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleRegister();
+            });
+            document.getElementById('guest-name').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleGuest();
+            });
+        });
+    </script>
+</body>
+</html>

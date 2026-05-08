@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalBeat - Mode Selector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="glitch-layer"></div>
+    <div id="dynamic-bg"></div>
+    <canvas id="visualizer-canvas"></canvas>
+
+    <div class="landing-wrapper">
+        <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; align-items: center;">
+            <span id="username-display" style="color: #888; font-size: 0.9rem;"></span>
+            <a href="/logout" style="color: #888; text-decoration: none; border: 1px solid #444; padding: 8px 15px; transition: 0.2s;">LOGOUT</a>
+        </div>
+
+        <div class="hero-title">LOCALBEAT</div>
+        <div class="hero-subtitle">GAME MODE SELECTION</div>
+
+        <div class="mode-selector" style="flex-direction: column; gap: 30px;">
+            <div class="mode-btn-large" onclick="goToSingleplayer()">
+                <h2>SINGLEPLAYER</h2>
+                <p>Play against yourself</p>
+            </div>
+            <div class="mode-btn-large" onclick="goToMultiplayer()">
+                <h2>MULTIPLAYER</h2>
+                <p>Play with friends (2-6 players)</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 50px;">
+            <button onclick="location.href='/'" style="background:none; border:none; color:#555; cursor:pointer; font-size: 0.9rem;">BACK TO HOME</button>
+        </div>
+    </div>
+
+    <audio id="bgm-player" crossorigin="anonymous"></audio>
+    <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+    <script>
+        window.onload = () => {
+            const username = "{{ user.username }}".replace('guest_', 'Guest: ');
+            document.getElementById('username-display').textContent = username;
+        };
+
+        function goToSingleplayer() {
+            window.location.href = '/singleplayer';
+        }
+
+        function goToMultiplayer() {
+            window.location.href = '/multiplayer';
+        }
+    </script>
+</body>
+</html>

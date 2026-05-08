@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalBeat - Multiplayer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="glitch-layer"></div>
+    <div id="dynamic-bg"></div>
+    <canvas id="visualizer-canvas"></canvas>
+
+    <div class="landing-wrapper">
+        <div class="hero-title">LOCALBEAT</div>
+        <div class="hero-subtitle">MULTIPLAYER MODE</div>
+
+        <div class="mode-selector" style="flex-direction: column; gap: 30px;">
+            <div class="mode-btn-large" onclick="goToHost()">
+                <h2>HOST GAME</h2>
+                <p>Create and manage the game</p>
+            </div>
+            <div class="mode-btn-large" onclick="goToJoin()">
+                <h2>JOIN GAME</h2>
+                <p>Enter an existing room code</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 50px;">
+            <button onclick="location.href='/mode'" style="background:none; border:none; color:#555; cursor:pointer;">BACK</button>
+        </div>
+    </div>
+
+    <audio id="bgm-player" crossorigin="anonymous"></audio>
+    <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+    <script>
+        function goToHost() {
+            window.location.href = '/host';
+        }
+
+        function goToJoin() {
+            window.location.href = '/join';
+        }
+    </script>
+</body>
+</html>

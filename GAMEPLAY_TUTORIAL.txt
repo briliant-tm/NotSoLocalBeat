@@ -1,0 +1,207 @@
+================================================================================
+LOCALBEAT - GAME TUTORIAL
+================================================================================
+
+WELCOME TO LOCALBEAT!
+
+LocalBeat adalah game music quiz yang menguji pengetahuan Anda tentang lagu dan
+artis. Game ini tersedia dalam mode Singleplayer dan Multiplayer dengan berbagai
+cara bermain.
+
+================================================================================
+1. GETTING STARTED
+================================================================================
+
+STEP 1: Buka aplikasi LocalBeat di browser (http://localhost:5000)
+
+STEP 2: Pilih salah satu dari tiga opsi autentikasi:
+   a) LOGIN - Masuk dengan akun yang sudah ada
+   b) REGISTER - Buat akun baru
+   c) GUEST - Main tanpa registrasi (hanya perlu memasukkan nama)
+
+STEP 3: Setelah autentikasi, Anda akan melihat halaman MODE SELECTOR
+
+================================================================================
+2. MODE SELECTOR
+================================================================================
+
+Di halaman ini, Anda dapat memilih:
+
+a) SINGLEPLAYER
+   - Main sendiri melawan komputer
+   - Konfigurasi: Pilih mode permainan dan jumlah pertanyaan
+   - Musik sumber: Local folder
+
+b) MULTIPLAYER
+   - Main bersama teman (2, 4, atau 6 pemain)
+   - Pilih HOST (buat ruangan) atau JOIN (masuk ruangan orang lain)
+   - Musik sumber: Local folder atau YouTube playlist
+
+================================================================================
+3. SINGLEPLAYER MODE
+================================================================================
+
+SETUP:
+1. Klik SINGLEPLAYER dari Mode Selector
+2. Pilih GAME MODE:
+   - CLASSIC (Multiple Choice): Jawab dari 4 pilihan
+   - TYPING (Hardcore): Ketik nama lagu/artis
+3. Atur jumlah pertanyaan (5-50)
+4. Klik START GAME
+
+GAMEPLAY:
+
+A. CLASSIC MODE (Multiple Choice):
+   - Dengarkan potongan lagu (15 detik)
+   - Pilih dari 4 opsi jawaban
+   - Poin: 100 untuk jawaban benar
+   - Anda punya 3 kesempatan REPLAY untuk mendengarkan ulang lagu
+
+   Soal dikategorikan menjadi:
+   - INTRO (20%): Potongan dari awal lagu
+   - OUTRO (20%): Potongan dari akhir lagu  
+   - CLIMAX (60%): Potongan dari bagian paling keras/ramai lagu
+
+B. TYPING MODE (Hardcore):
+   - Dengarkan potongan lagu (15 detik)
+   - Ketik nama lagu dan/atau artis
+   - Poin: 50 untuk artis + 50 untuk judul
+   - Jika file berisi karakter asing (Jepang, Korea, dll), mode akan berubah
+     menjadi "Guess Folder Name" di mana Anda harus menebak nama folder
+   - Sistem penilaian: Partial matching (tidak harus 100% akurat)
+
+PROGRESS BAR:
+- Bar putih menunjukkan progress waktu pemutaran (15 detik)
+- HUD di atas kiri menunjukkan pertanyaan ke berapa dan skor Anda
+
+FINISHING:
+- Setelah semua pertanyaan selesai, Anda akan melihat skor final
+- Klik MENU untuk kembali atau RETRY untuk bermain lagi
+
+================================================================================
+4. MULTIPLAYER MODE
+================================================================================
+
+SETUP ROOM:
+
+A. HOST (Pembuat Ruangan):
+   1. Klik MULTIPLAYER -> HOST GAME
+   2. Konfigurasi:
+      - Game Mode: CLASSIC atau TYPING
+      - Game Type: LOCAL (same network) atau INTERNET (online)
+      - Music Source: LOCAL FOLDER atau YOUTUBE PLAYLIST
+      - Player Count: 2, 4, atau 6 pemain
+      - Number of Questions: 5-50
+   3. Klik CREATE ROOM
+   4. Bagikan ROOM CODE ke teman-teman Anda
+
+B. JOIN (Pemain Biasa):
+   1. Klik MULTIPLAYER -> JOIN GAME
+   2. Masukkan ROOM CODE dari Host
+   3. Klik JOIN
+   4. Tunggu sampai semua pemain siap
+
+READY SCREEN:
+
+- Setelah bergabung, Anda akan melihat daftar pemain
+- Klik READY UP untuk menandakan Anda siap bermain
+- Semua pemain harus klik READY sebelum Host bisa memulai
+- Host akan melihat tombol START GAME (hanya tersedia jika semua pemain ready)
+
+GAMEPLAY:
+
+- Sama seperti Singleplayer tapi dilakukan bersama-sama
+- Semua pemain melihat soal yang sama dan memiliki waktu bermain yang sama
+- Skor dihitung individual
+- Setelah game selesai, Anda bisa melihat ruangan yang digunakan
+
+MULTIPLAYER DENGAN YOUTUBE:
+
+- Host bisa memilih YouTube playlist
+- Sistem akan random memilih lagu dari playlist
+- Timestamp: Random dari 0-80% durasi lagu (untuk menghindari outro)
+- Durasi clip tetap 15 detik seperti mode lokal
+
+================================================================================
+5. AUDIO VISUALIZER (BACKGROUND SPECTRUM)
+================================================================================
+
+Background game menampilkan spektrum audio real-time yang:
+- Berdetak mengikuti ritme musik
+- Menampilkan frekuensi audio dalam bentuk bar putih di tengah layar
+- Secara visual menunjukkan energi bass/treble lagu
+- Memberikan feedback visual selama gameplay
+
+TIPS:
+- Perhatikan visualizer untuk mendapat insight tentang struktur lagu
+- Bagian climax biasanya menunjukkan energi paling tinggi
+
+================================================================================
+6. SCORING SYSTEM
+================================================================================
+
+CLASSIC MODE:
+- Benar: 100 poin
+- Salah: 0 poin
+- Total Score = jumlah soal benar x 100
+
+TYPING MODE:
+- Judul tepat: 50 poin
+- Artis tepat: 50 poin (dibagi jika ada kolaborasi/feat)
+- Sebagian benar: nilai proposional (partial credit)
+- Total Score = akumulasi dari semua soal
+
+================================================================================
+7. LANGUAGE SETTING
+================================================================================
+
+- Klik dropdown LANGUAGE di halaman autentikasi
+- Pilih English atau Bahasa Indonesia
+- Setting disimpan di localStorage browser
+
+================================================================================
+8. EXITING GAME
+================================================================================
+
+- Klik MENU untuk kembali ke Mode Selector
+- Klik LOGOUT untuk keluar akun
+- Klik tombol BACK untuk navigasi mundur
+- Browser back button juga dapat digunakan
+
+================================================================================
+9. TIPS & TRICKS
+================================================================================
+
+1. Dengarkan dengan seksama - beberapa lagu memiliki intro/outro yang khas
+2. Jangan terburu-buru menjawab - gunakan semua 3 kesempatan REPLAY jika perlu
+3. Mode TYPING lebih sulit - persiapkan keyboard yang nyaman
+4. Multiplayer lebih seru - ajak teman dan buat kompetisi
+5. YouTube playlist bagus untuk eksplorasi musik baru
+6. Skor tinggi di Local Mode memakan waktu - mulai dari jumlah soal kecil dulu
+
+================================================================================
+10. TROUBLESHOOTING
+================================================================================
+
+AUDIO TIDAK TERDENGAR:
+- Pastikan volume browser tidak mute
+- Check browser console untuk error (F12)
+- Refresh halaman
+
+TIDAK BISA BERGABUNG ROOM:
+- Pastikan room code benar (case-insensitive, 6 karakter)
+- Pastikan host belum mulai game
+- Check apakah room sudah penuh (2/4/6 players)
+
+SPEKTRUM TIDAK MUNCUL:
+- Ini normal untuk beberapa browser lama
+- Update browser Anda ke versi terbaru
+
+DATABASE ERROR:
+- Pastikan folder musik (MUSIC_FOLDER) terdaftar dengan benar
+- Pastikan file musik dalam format yang didukung (MP3, FLAC, WAV, OGG, M4A)
+
+================================================================================
+Terima kasih telah bermain LocalBeat!
+Nikmati pengalaman quiz musik yang interaktif dan menyenangkan.
+================================================================================

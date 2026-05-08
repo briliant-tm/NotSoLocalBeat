@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalBeat - Host Setup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="glitch-layer"></div>
+    <div id="dynamic-bg"></div>
+    <canvas id="visualizer-canvas"></canvas>
+
+    <div class="landing-wrapper">
+        <div class="hero-title">LOCALBEAT</div>
+        <div class="hero-subtitle">HOST GAME SETUP</div>
+
+        <div class="setup-container">
+            <div class="setup-item">
+                <label>GAME MODE</label>
+                <select id="game-mode" class="setup-select">
+                    <option value="CLASSIC">CLASSIC (Multiple Choice)</option>
+                    <option value="TYPING">TYPING (Hardcore)</option>
+                </select>
+            </div>
+
+            <div class="setup-item">
+                <label>GAME TYPE</label>
+                <select id="game-type" class="setup-select">
+                    <option value="LOCAL">LOCAL (Same Network)</option>
+                    <option value="INTERNET">INTERNET (Online)</option>
+                </select>
+            </div>
+
+            <div class="setup-item">
+                <label>MUSIC SOURCE</label>
+                <select id="music-source" class="setup-select" onchange="toggleYoutube()">
+                    <option value="LOCAL">LOCAL FOLDER</option>
+                    <option value="YOUTUBE">YOUTUBE PLAYLIST</option>
+                </select>
+            </div>
+
+            <div class="setup-item" id="youtube-input" style="display: none;">
+                <label>YOUTUBE PLAYLIST URL</label>
+                <input type="text" id="playlist-url" placeholder="https://www.youtube.com/playlist?list=..." class="setup-input">
+            </div>
+
+            <div class="setup-item">
+                <label>PLAYER COUNT</label>
+                <select id="player-count" class="setup-select">
+                    <option value="2">2 PLAYERS</option>
+                    <option value="4">4 PLAYERS</option>
+                    <option value="6">6 PLAYERS</option>
+                </select>
+            </div>
+
+            <div class="setup-item">
+                <label>NUMBER OF QUESTIONS</label>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <input type="range" id="question-count" min="5" max="50" step="5" value="10" oninput="updateQCount()">
+                    <span id="q-display" style="min-width: 30px;">10</span>
+                </div>
+            </div>
+
+            <button class="btn-main" onclick="createRoom()">CREATE ROOM</button>
+            <div id="error-msg" class="error-msg"></div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button onclick="location.href='/multiplayer'" style="background:none; border:none; color:#555; cursor:pointer;">BACK</button>
+        </div>
+    </div>
+
+    <audio id="bgm-player" crossorigin="anonymous"></audio>
+    <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+    <script>
+        function updateQCount() {
+            document.getElementById('q-display').textContent = document.getElementById('question-count').value;
+        }
+
+        function toggleYoutube() {
+            const source = document.getElementById('music-source').value;
+            const youtubeInput = document.getElementById('youtube-input');
+            youtubeInput.style.display = source === 'YOUTUBE' ? 'block' : 'none';
+        }
+
+        async function createRoom() {
+            const errorDiv = document.getElementById('error-msg');
+            errorDiv.textContent = '';
+
+            const mode = document.getElementById('game-mode').value;
+            const gameType = document.getElementById('game-type').value;
+            const musicSource = document.getElementById('music-source').value;
+            const playlistUrl = document.getElementById('playlist-url').value;
+            const playerCount = document.getElementById('player-count').value;
+            const questionCount = document.getElementById('question-count').value;
+
+            if (musicSource === 'YOUTUBE' && !playlistUrl.trim()) {
+                errorDiv.textContent = 'YouTube playlist URL is required';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/room/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mode,
+                        game_type: gameType,
+                        max_players: playerCount,
+                        music_source: musicSource,
+                        youtube_url: playlistUrl,
+                        question_count: questionCount
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    window.sessionStorage.setItem('current_room_id', data.room_id);
+                    document.getElementById('glitch-layer').classList.add('glitch-active');
+                    setTimeout(() => {
+                        window.location.href = `/game/multiplayer`;
+                    }, 300);
+                } else {
+                    errorDiv.textContent = data.error || 'Failed to create room';
+                }
+            } catch (e) {
+                errorDiv.textContent = 'Connection error';
+            }
+        }
+    </script>
+</body>
+</html>

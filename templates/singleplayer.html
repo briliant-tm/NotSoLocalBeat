@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalBeat - Singleplayer Setup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="glitch-layer"></div>
+    <div id="dynamic-bg"></div>
+    <canvas id="visualizer-canvas"></canvas>
+
+    <div class="landing-wrapper">
+        <div class="hero-title">LOCALBEAT</div>
+        <div class="hero-subtitle">SINGLEPLAYER CONFIG</div>
+
+        <div class="setup-container">
+            <div class="setup-item">
+                <label>GAME MODE</label>
+                <select id="game-mode" class="setup-select">
+                    <option value="CLASSIC">CLASSIC (Multiple Choice)</option>
+                    <option value="TYPING">TYPING (Hardcore)</option>
+                </select>
+            </div>
+
+            <div class="setup-item">
+                <label>NUMBER OF QUESTIONS</label>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <input type="range" id="question-count" min="5" max="50" step="5" value="10" oninput="updateQCount()">
+                    <span id="q-display" style="min-width: 30px;">10</span>
+                </div>
+            </div>
+
+            <div class="setup-item">
+                <label>MUSIC SOURCE</label>
+                <select id="music-source" class="setup-select">
+                    <option value="LOCAL">LOCAL FOLDER</option>
+                </select>
+            </div>
+
+            <button class="btn-main" onclick="startSingleplayer()">START GAME</button>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button onclick="location.href='/mode'" style="background:none; border:none; color:#555; cursor:pointer;">BACK</button>
+        </div>
+    </div>
+
+    <audio id="bgm-player" crossorigin="anonymous"></audio>
+    <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+    <script>
+        function updateQCount() {
+            document.getElementById('q-display').textContent = document.getElementById('question-count').value;
+        }
+
+        function startSingleplayer() {
+            const mode = document.getElementById('game-mode').value;
+            const count = document.getElementById('question-count').value;
+            
+            document.getElementById('glitch-layer').classList.add('glitch-active');
+            setTimeout(() => {
+                window.location.href = `/game/singleplayer?count=${count}&mode=${mode}`;
+            }, 300);
+        }
+    </script>
+</body>
+</html>

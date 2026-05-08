@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalBeat - Join Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="glitch-layer"></div>
+    <div id="dynamic-bg"></div>
+    <canvas id="visualizer-canvas"></canvas>
+
+    <div class="landing-wrapper">
+        <div class="hero-title">LOCALBEAT</div>
+        <div class="hero-subtitle">JOIN GAME</div>
+
+        <div class="setup-container" style="max-width: 400px;">
+            <div class="setup-item">
+                <label>ENTER ROOM CODE</label>
+                <input type="text" id="room-code" placeholder="XXXXXX" class="setup-input" style="text-transform: uppercase; text-align: center; letter-spacing: 3px; font-size: 1.5rem;">
+            </div>
+
+            <button class="btn-main" onclick="joinRoom()">JOIN</button>
+            <div id="error-msg" class="error-msg"></div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button onclick="location.href='/multiplayer'" style="background:none; border:none; color:#555; cursor:pointer;">BACK</button>
+        </div>
+    </div>
+
+    <audio id="bgm-player" crossorigin="anonymous"></audio>
+    <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+    <script>
+        document.getElementById('room-code').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') joinRoom();
+        });
+
+        async function joinRoom() {
+            const errorDiv = document.getElementById('error-msg');
+            const roomCode = document.getElementById('room-code').value.trim().toUpperCase();
+
+            if (!roomCode || roomCode.length !== 6) {
+                errorDiv.textContent = 'Invalid room code';
+                return;
+            }
+
+            errorDiv.textContent = '';
+
+            try {
+                const res = await fetch('/api/room/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room_code: roomCode })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    window.sessionStorage.setItem('current_room_id', data.room_id);
+                    document.getElementById('glitch-layer').classList.add('glitch-active');
+                    setTimeout(() => {
+                        window.location.href = `/game/multiplayer`;
+                    }, 300);
+                } else {
+                    errorDiv.textContent = data.error || 'Failed to join room';
+                }
+            } catch (e) {
+                errorDiv.textContent = 'Connection error';
+            }
+        }
+    </script>
+</body>
+</html>

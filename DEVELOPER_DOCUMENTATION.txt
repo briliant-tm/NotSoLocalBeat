@@ -1,0 +1,556 @@
+================================================================================
+LOCALBEAT - DEVELOPER DOCUMENTATION
+================================================================================
+
+Version: 2.0 (Multiplayer Edition)
+Last Updated: 2024
+
+================================================================================
+PROJECT OVERVIEW
+================================================================================
+
+LocalBeat adalah aplikasi web-based music quiz game yang menggunakan:
+- Backend: Python Flask dengan SQLAlchemy ORM
+- Frontend: Vanilla JavaScript, HTML5, CSS3
+- Audio Processing: Librosa (ML-based audio analysis)
+- Visualization: Web Audio API + Canvas
+- Database: SQLite (default) / PostgreSQL (production)
+
+Fitur utama:
+- Singleplayer dan Multiplayer (2-6 pemain)
+- Local music library scanning
+- YouTube playlist support
+- Real-time audio spectrum visualization
+- Smart drop/climax detection menggunakan AI
+- Multi-language support (English, Bahasa Indonesia)
+- User authentication dengan password hashing
+
+================================================================================
+TECH STACK
+================================================================================
+
+Backend:
+- Flask: Web framework
+- Flask-SQLAlchemy: ORM untuk database
+- Flask-Bcrypt: Password hashing
+- Librosa: Audio feature extraction
+- NumPy: Numerical computing
+- yt-dlp: YouTube playlist fetching
+
+Frontend:
+- Vanilla JavaScript (no frameworks)
+- HTML5 Canvas: Visualization
+- Web Audio API: Real-time frequency analysis
+- CSS3: Styling dan animations
+
+Database:
+- SQLite: Development/local
+- PostgreSQL: Production/Vercel
+
+================================================================================
+PROJECT STRUCTURE
+================================================================================
+
+LocalBeat-alpha/
+├── app.py                          # Main Flask application
+├── models.py                       # SQLAlchemy database models
+├── requirements.txt                # Python dependencies
+├── .env.example                    # Environment configuration template
+├── localbeat.db                    # SQLite database (auto-created)
+├── audio_cache.json               # Drop detection cache
+├── game_history.json              # Play history (legacy)
+├── static/
+│   ├── css/
+│   │   └── style.css              # Global styling & responsive design
+│   └── js/
+│       ├── landing.js             # Landing page & BGM visualizer
+│       └── quiz.js                # Quiz game logic & multiplayer polling
+├── templates/
+│   ├── index.html                 # Redirect to auth
+│   ├── auth.html                  # Authentication (login/register/guest)
+│   ├── mode_selector.html         # Singleplayer vs Multiplayer
+│   ├── singleplayer.html          # Singleplayer configuration
+│   ├── multiplayer.html           # Multiplayer mode selection
+│   ├── host_setup.html            # Host room setup
+│   ├── join_setup.html            # Join room with code
+│   └── quiz.html                  # Main game interface
+├── GAMEPLAY_TUTORIAL.txt          # User-facing gameplay guide
+└── DEVELOPER_DOCUMENTATION.txt    # This file
+
+================================================================================
+DATABASE SCHEMA
+================================================================================
+
+USERS TABLE:
+- id: Primary Key
+- username: String (unique)
+- email: String (optional)
+- password_hash: String (bcrypt hashed)
+- is_guest: Boolean
+- created_at: DateTime
+
+GAME_ROOMS TABLE:
+- id: Primary Key
+- room_code: String (6 char, unique) - RNG code untuk join
+- host_id: FK (users.id)
+- mode: String (CLASSIC atau TYPING)
+- game_type: String (LOCAL atau INTERNET)
+- max_players: Integer (2, 4, atau 6)
+- music_source: String (LOCAL atau YOUTUBE)
+- youtube_playlist_url: String (optional)
+- question_count: Integer
+- is_started: Boolean
+- is_finished: Boolean
+- created_at: DateTime
+- started_at: DateTime
+- finished_at: DateTime
+
+ROOM_PLAYERS TABLE (M2M):
+- id: Primary Key
+- room_id: FK (game_rooms.id)
+- user_id: FK (users.id)
+- is_ready: Boolean
+- joined_at: DateTime
+
+GAME_SESSIONS TABLE:
+- id: Primary Key
+- room_id: FK (game_rooms.id)
+- user_id: FK (users.id)
+- current_question: Integer
+- total_score: Integer
+- created_at: DateTime
+- finished_at: DateTime
+
+PLAYER_SCORES TABLE:
+- id: Primary Key
+- session_id: FK (game_sessions.id)
+- user_id: FK (users.id)
+- question_number: Integer
+- score_gained: Integer
+- answered: String
+- correct_answer: String
+- is_correct: Boolean
+- created_at: DateTime
+
+QUESTION_CACHE TABLE:
+- id: Primary Key
+- file_path: String (unique)
+- drop_time: Float (seconds)
+- duration: Float (seconds)
+- cached_at: DateTime
+
+PLAY_HISTORY TABLE:
+- id: Primary Key
+- file_path: String
+- user_id: FK (users.id, optional)
+- played_at: DateTime
+
+================================================================================
+BACKEND ROUTES & API ENDPOINTS
+================================================================================
+
+AUTHENTICATION ROUTES:
+----------------------------------------------
+GET /auth
+  - Menampilkan halaman autentikasi
+
+POST /api/register
+  Body: { username, password, email? }
+  Returns: { success, error? }
+
+POST /api/login
+  Body: { username, password }
+  Returns: { success, error? }
+
+POST /api/guest
+  Body: { guest_name }
+  Returns: { success, error? }
+
+GET /logout
+  - Clear session dan redirect ke auth
+
+----------------------------------------------
+MODE SELECTION ROUTES:
+----------------------------------------------
+GET /mode
+  @require_login
+  - Tampilkan mode selector page
+
+GET /singleplayer
+  @require_login
+  - Setup singleplayer configuration
+
+GET /game/singleplayer
+  @require_login
+  Query: count, mode
+  - Jalankan singleplayer game
+
+GET /multiplayer
+  @require_login
+  - Tampilkan multiplayer selector (host/join)
+
+GET /host
+  @require_login
+  - Tampilkan host setup page
+
+GET /join
+  @require_login
+  - Tampilkan join room page
+
+----------------------------------------------
+MULTIPLAYER API ROUTES:
+----------------------------------------------
+POST /api/room/create
+  @require_login
+  Body: {
+    mode (CLASSIC|TYPING),
+    game_type (LOCAL|INTERNET),
+    max_players (2|4|6),
+    music_source (LOCAL|YOUTUBE),
+    youtube_url? (jika YOUTUBE),
+    question_count
+  }
+  Returns: { success, room_id, room_code, error? }
+
+POST /api/room/join
+  @require_login
+  Body: { room_code }
+  Returns: { success, room_id, error? }
+
+GET /api/room/<room_id>
+  @require_login
+  - Get current room info dengan list players
+  Returns: {
+    room_code,
+    host_id,
+    mode,
+    max_players,
+    question_count,
+    is_started,
+    music_source,
+    players: [
+      { id, username, is_ready, is_host },
+      ...
+    ]
+  }
+
+POST /api/room/<room_id>/ready
+  @require_login
+  Body: { is_ready }
+  - Mark player sebagai ready/unready
+
+POST /api/room/<room_id>/start
+  @require_login
+  - Host only: Start game (semua players harus ready)
+  Returns: { success, error? }
+
+GET /game/multiplayer
+  @require_login
+  - Jalankan multiplayer game
+
+----------------------------------------------
+QUIZ/GAME API ROUTES:
+----------------------------------------------
+GET /api/bgm
+  - Get random background music untuk landing page
+  Returns: { title, start, token }
+
+GET /api/question
+  Query: room_id?, is_multiplayer?
+  - Get pertanyaan berikutnya (lokal atau dari YouTube)
+  Returns: {
+    clue (folder name),
+    options: [ans1, ans2, ans3, ans4],
+    mode (INTRO|OUTRO|CLIMAX),
+    start_time,
+    duration,
+    typing_type (NORMAL|FOLDER),
+    source (LOCAL|YOUTUBE),
+    youtube_url? (jika YOUTUBE),
+    title? (jika YOUTUBE)
+  }
+
+GET /stream_audio
+  Query: type (bgm|quiz)
+  - Stream audio file dari disk
+  Returns: audio file
+
+POST /submit_answer
+  Body: {
+    answer,
+    game_mode (CLASSIC|TYPING),
+    typing_type,
+    source (LOCAL|YOUTUBE),
+    correct_title? (jika YOUTUBE)
+  }
+  Returns: { correct, score, correct_answer }
+
+================================================================================
+KEY FUNCTIONS & THEIR LOCATIONS
+================================================================================
+
+AUTHENTICATION:
+- require_login() @ app.py (line ~87)
+  Decorator untuk protect routes yang perlu login
+
+- get_current_user() @ app.py (line ~96)
+  Get user object dari session
+
+----------------------------------------------
+MUSIC ANALYSIS:
+----------------------------------------------
+- get_all_songs() @ app.py (line ~71)
+  Scan semua file musik dari MUSIC_FOLDER
+
+- get_smart_random_song() @ app.py (line ~79)
+  Get random song dengan smart retry logic (hindari repeat)
+
+- update_history() @ app.py (line ~100)
+  Save play history ke database
+
+- analyze_drop() @ app.py (line ~106)
+  Librosa-based audio analysis untuk cari "drop" point
+  Cache ke database untuk performa
+  Returns: drop_time (seconds)
+
+- get_duration() @ app.py (line ~130)
+  Get durasi lagu menggunakan librosa
+
+----------------------------------------------
+QUESTION GENERATION:
+----------------------------------------------
+- parse_artist_title() @ app.py (line ~67)
+  Parse "Artist - Title" format
+
+- split_artists() @ app.py (line ~73)
+  Split "feat" dan kolaborasi ke daftar artists
+
+- is_foreign() @ app.py (line ~60)
+  Detect non-ASCII characters (untuk folder mode)
+
+- get_question() @ app.py (line ~257)
+  Generate pertanyaan dengan:
+  1. 20-20-60 rule untuk start_time selection
+  2. Random option generation
+  3. Typing type detection
+
+----------------------------------------------
+ANSWER CHECKING:
+----------------------------------------------
+- check_answer() @ app.py (line ~325)
+  Validate answer untuk CLASSIC dan TYPING mode
+  Include fuzzy matching logic
+
+----------------------------------------------
+MULTIPLAYER:
+----------------------------------------------
+- generate_room_code() @ app.py (line ~132)
+  Generate 6-char RNG code untuk room
+
+- get_youtube_playlist_songs() @ app.py (line ~135)
+  Fetch songs dari YouTube playlist menggunakan yt-dlp
+
+- get_youtube_video_info() @ app.py (line ~160)
+  Get video info (title, duration) dari YouTube
+
+----------------------------------------------
+VISUALIZATION (Frontend):
+----------------------------------------------
+Landing page (landing.js):
+- initExperience() (line ~19)
+  Setup Web Audio API context
+  Render particle effects
+
+- renderFrame() (line ~56)
+  RAF loop untuk visualizer animation
+  Display mirror spectrum bars
+
+Quiz page (quiz.js):
+- updateGameLoop() (line ~200)
+  RAF loop selama audio playing
+  Update progress bar & visualizer
+  Dynamic background intensity
+
+- loadNextLevel() (line ~165)
+  Transition ke pertanyaan berikutnya
+  Glitch effect animation
+
+- setupRound() (line ~189)
+  Render options grid atau typing input
+  Setup answer submission
+
+================================================================================
+DEPLOYMENT NOTES
+================================================================================
+
+LOCAL DEVELOPMENT:
+1. Clone project
+2. pip install -r requirements.txt
+3. python app.py
+4. Akses http://localhost:5000
+
+VERCEL DEPLOYMENT:
+
+Challenges:
+- Vercel adalah serverless platform (max 60s function timeout)
+- Tidak support WebSocket langsung
+- Tidak support file writing untuk SQLite
+
+Solution implemented:
+- Gunakan API polling (1s interval) untuk multiplayer sync
+- Gunakan environment variables untuk DATABASE_URL
+- Gunakan PostgreSQL cloud database (Supabase, Heroku Postgres, dll)
+
+Steps:
+1. Setup PostgreSQL database
+2. Set DATABASE_URL di Vercel environment
+3. Set MUSIC_FOLDER ke path yang accessible
+4. Deploy dengan: vercel deploy
+
+UNTUK YOUTUBE SUPPORT DI PRODUCTION:
+- yt-dlp perlu binary eksternal atau use API service
+- Consider using youtube-dl alternative atau API
+- Timeout constraint: extract maksimal 50 items dari playlist
+
+================================================================================
+AUDIO ANALYSIS ALGORITHM (20-20-60 Rule)
+================================================================================
+
+Sistem ini generate pertanyaan dari 3 bagian berbeda lagu:
+
+1. INTRO (20% probabilitas):
+   - start_time = 0
+   - Dari awal lagu
+
+2. OUTRO (20% probabilitas):
+   - start_time = duration - 30 seconds
+   - Dari akhir lagu
+
+3. CLIMAX (60% probabilitas):
+   - Menggunakan Librosa untuk detect RMS energy peaks
+   - start_time = drop_time - 5 seconds
+   - Dari bagian "drop" atau puncak musik
+
+Caching:
+- Result analysis disimpan di database (question_cache)
+- Subsequent plays langsung retrieve dari cache
+- Improve performa signifikan untuk song repeat
+
+================================================================================
+SECURITY CONSIDERATIONS
+================================================================================
+
+1. Password hashing menggunakan bcrypt
+   - Cost factor: default (12)
+   - Secure terhadap brute force
+
+2. Session security:
+   - SECURE flag untuk HTTPS
+   - HTTPONLY flag untuk prevent XSS
+   - SAMESITE=Lax untuk CSRF protection
+
+3. Input validation:
+   - Username/email validation
+   - SQL injection prevention via SQLAlchemy ORM
+   - XSS prevention via Jinja2 auto-escaping
+
+4. Database:
+   - Foreign keys untuk referential integrity
+   - Unique constraints untuk room_code dan username
+
+Tips for production:
+- Set SECRET_KEY ke random string yang kuat
+- Use HTTPS only
+- Implement rate limiting untuk API
+- Add CORS whitelist untuk domain tertentu
+- Regular database backups
+
+================================================================================
+FUTURE ENHANCEMENTS
+================================================================================
+
+1. Real-time leaderboards
+2. Achievement system
+3. Customizable difficulty levels
+4. Playlist creation/management
+5. Social features (friends, invites)
+6. More game modes (rhythm matching, lyric completion)
+7. Mobile app (React Native)
+8. Streaming integration (Spotify, Apple Music)
+9. Advanced analytics (play patterns, accuracy stats)
+10. Server-side rendering untuk SEO
+
+================================================================================
+TROUBLESHOOTING GUIDE
+================================================================================
+
+Error: "No songs" saat game start:
+- Check MUSIC_FOLDER path di .env
+- Pastikan folder exist dan contain musik files
+- Verify file format support (MP3, FLAC, WAV, OGG, M4A)
+
+Error: Database locked:
+- Multiple processes accessing SQLite
+- Solution: Gunakan PostgreSQL untuk concurrent access
+- Atau set SQLALCHEMY_ENGINE_OPTIONS timeout lebih tinggi
+
+Error: YouTube playlist fetch timeout:
+- yt-dlp sedang overwhelm
+- Solution: Cache playlist results atau increase timeout
+
+Error: Audio not loading:
+- CORS issue jika stream dari external URL
+- Check browser console untuk CORS error
+- For YouTube: Perlu special handling (privacy mode, signature)
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+Authentication:
+[ ] Register dengan username/password baru
+[ ] Login dengan existing account
+[ ] Guest mode tanpa registration
+[ ] Logout dan session cleared
+[ ] Incorrect password rejected
+
+Singleplayer:
+[ ] Classic mode: 4 options muncul
+[ ] Typing mode: Input field fokus
+[ ] Replay button limit (3x)
+[ ] Score calculation correct
+[ ] Progress bar smooth
+
+Multiplayer:
+[ ] Create room generate code
+[ ] Join room dengan code
+[ ] Room max players enforced
+[ ] Ready button toggle
+[ ] Start button only for host
+[ ] Game sync antar players
+[ ] Score independent per player
+
+Audio:
+[ ] BGM plays di landing
+[ ] Quiz audio plays
+[ ] Visualizer animasi smooth
+[ ] Volume fade in/out works
+
+UI/UX:
+[ ] Language switching works
+[ ] Glitch transitions smooth
+[ ] Responsive design (mobile)
+[ ] Error messages clear
+[ ] No emoji di text (clean UI)
+
+================================================================================
+CONTACT & SUPPORT
+================================================================================
+
+For issues atau feature requests:
+- Check GAMEPLAY_TUTORIAL.txt untuk user guide
+- Debug dengan browser developer tools (F12)
+- Check console.log() outputs
+- Verify .env configuration
+
+================================================================================

@@ -1,0 +1,9 @@
+flask
+flask-sqlalchemy
+flask-bcrypt
+flask-cors
+librosa
+numpy
+mutagen
+python-dotenv
+yt-dlp
