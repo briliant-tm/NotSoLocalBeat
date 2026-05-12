@@ -205,9 +205,7 @@ function loadNextLevel() {
                 return;
             }
             nextData = data;
-            if (data.source === 'YOUTUBE') {
-                nextData = data;
-            } else {
+            if (nextData.source !== 'YOUTUBE') {
                 audio.src = `/stream_audio?type=quiz&t=${Date.now()}`;
                 audio.load();
             }

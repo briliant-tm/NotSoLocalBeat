@@ -44,7 +44,7 @@ with app.app_context():
 bcrypt.init_app(app)
 CORS(app)
 
-MUSIC_FOLDER = os.environ.get('MUSIC_FOLDER', r"your_music_folder_path_here")
+MUSIC_FOLDER = os.environ.get(r"your_music_folder_path_here")
 CACHE_FILE = 'audio_cache.json'
 HISTORY_FILE = 'game_history.json'
 
@@ -86,40 +86,40 @@ def split_artists(artist_string):
     raw_list = re.split(delimiters, artist_string, flags=re.IGNORECASE)
     return [x.strip() for x in raw_list if x.strip()]
 
-# def get_all_songs():
-#     songs = []
-#     if not os.path.exists(MUSIC_FOLDER): 
-#         return []
-#     try:
-#         for root, dirs, files in os.walk(MUSIC_FOLDER):
-#             for file in files:
-#                 if file.lower().endswith(('.mp3', '.flac', '.wav', '.ogg', '.m4a')):
-#                     songs.append(os.path.join(root, file))
-#     except:
-#         pass
-#     return songs
+def get_all_songs():
+    songs = []
+    if not os.path.exists(MUSIC_FOLDER): 
+        return []
+    try:
+        for root, dirs, files in os.walk(MUSIC_FOLDER):
+            for file in files:
+                if file.lower().endswith(('.mp3', '.flac', '.wav', '.ogg', '.m4a')):
+                    songs.append(os.path.join(root, file))
+    except:
+        pass
+    return songs
 
-# def get_smart_random_song():
-#     songs = get_all_songs()
-#     if not songs: 
-#         return None
+def get_smart_random_song():
+    songs = get_all_songs()
+    if not songs: 
+        return None
     
-#     try:
-#         recent = db.session.query(PlayHistory.file_path).order_by(
-#             PlayHistory.played_at.desc()
-#         ).limit(30).all()
-#         recent_paths = [r[0] for r in recent]
-#     except:
-#         recent_paths = []
+    try:
+        recent = db.session.query(PlayHistory.file_path).order_by(
+            PlayHistory.played_at.desc()
+        ).limit(30).all()
+        recent_paths = [r[0] for r in recent]
+    except:
+        recent_paths = []
 
-#     for _ in range(10):
-#         selected = random.choice(songs)
-#         if selected in recent_paths:
-#             if random.random() < 0.15: 
-#                 return selected
-#         else:
-#             return selected
-#     return selected
+    for _ in range(10):
+        selected = random.choice(songs)
+        if selected in recent_paths:
+            if random.random() < 0.15: 
+                return selected
+        else:
+            return selected
+    return selected
 
 def update_history(song_path, user_id=None):
     try:
@@ -599,6 +599,54 @@ def get_bgm():
 
 # Di dalam app.py, ubah route /api/question
 @app.route('/api/question')
+def get_youtube_question_logic(playlist_url):
+    try:
+        songs = get_youtube_playlist_songs(playlist_url, limit=50)
+
+        if not songs:
+            return jsonify({'error': 'Could not fetch playlist'}), 400
+
+        selected = random.choice(songs)
+
+        duration = selected.get('duration', 180)
+
+        max_timestamp = int(duration * 0.8)
+
+        start_time = random.randint(
+            0,
+            max(0, max_timestamp - 15)
+        )
+
+        session['quiz_url'] = selected['url']
+        session['start_time'] = start_time
+
+        all_titles = [s['title'] for s in songs]
+
+        options = [selected['title']]
+
+        while len(options) < 4 and len(all_titles) > len(options):
+            opt = random.choice(all_titles)
+
+            if opt not in options:
+                options.append(opt)
+
+        random.shuffle(options)
+
+        return jsonify({
+            'clue': 'YOUTUBE PLAYLIST',
+            'options': options,
+            'mode': 'YOUTUBE',
+            'start_time': start_time,
+            'duration': min(15, duration - start_time),
+            'typing_type': 'NORMAL',
+            'source': 'YOUTUBE',
+            'youtube_url': selected['url'],
+            'title': selected['title']
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
 def get_question():
     try:
         room_id = request.args.get('room_id')
@@ -607,7 +655,7 @@ def get_question():
         # Logika Singleplayer sekarang dipaksa menggunakan YouTube
         if not is_multiplayer:
             # Anda bisa menentukan playlist default untuk singleplayer di sini
-            default_playlist = "URL_PLAYLIST_DEFAULT_ANDA" 
+            default_playlist = "https://youtube.com/playlist?list=PLW37nsP-pBsN4ZqHR52Iulo6tWRe8U1GE&si=zGxCz-kr3ABzFX-z" 
             return get_youtube_question_logic(default_playlist)
 
         # Logika Multiplayer
