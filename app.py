@@ -38,6 +38,9 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 db.init_app(app)
+with app.app_context():
+    db.create_all()
+    
 bcrypt.init_app(app)
 CORS(app)
 
@@ -799,11 +802,6 @@ def open_browser():
     webbrowser.open_new("http://127.0.0.1:5000")
 
 if __name__ == '__main__':
-    with app.app_context():
-        try:
-            db.create_all()
-        except Exception as e:
-            print(f"Gagal inisialisasi DB: {e}")
     
     threading.Timer(1.5, open_browser).start()
     app.run(host='0.0.0.0', debug=False, port=5000)
