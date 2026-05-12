@@ -47,7 +47,7 @@ class GameRoom(db.Model):
     host = db.relationship('User', backref='hosted_rooms')
     players = db.relationship('RoomPlayer', backref='room', cascade='all, delete-orphan')
     game_session = db.relationship('GameSession', backref='room', uselist=False)
-    
+
     scores = db.relationship(
     'PlayerScore',
     backref='room',
@@ -74,7 +74,6 @@ class GameSession(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     finished_at = db.Column(db.DateTime, nullable=True)
     
-    player_scores = db.relationship('PlayerScore', backref='session', cascade='all, delete-orphan')
 
 class PlayerScore(db.Model):
     __tablename__ = 'player_scores'
