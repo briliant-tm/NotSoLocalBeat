@@ -71,6 +71,25 @@
         </div>
     </div>
 
+         <form id="hostForm">
+
+        <!-- setting room -->
+
+        <button id="createRoomBtn" type="submit">
+        Create Room
+        </button>
+
+        <!-- TAMBAHKAN DI SINI -->
+        <div class="room-code-container">
+        <p>Room Code:</p>
+
+        <span id="roomCode">
+            ------
+        </span>
+    </div>
+
+</form>
+
     <audio id="bgm-player" crossorigin="anonymous"></audio>
     <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
     <script>
