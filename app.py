@@ -800,10 +800,7 @@ def open_browser():
 
 if __name__ == '__main__':
     with app.app_context():
-        try:
-            db.create_all()
-        except:
-            pass
+        db.create_all() # Ini akan membuat tabel jika belum ada
     
     threading.Timer(1.5, open_browser).start()
     app.run(host='0.0.0.0', debug=False, port=5000)
