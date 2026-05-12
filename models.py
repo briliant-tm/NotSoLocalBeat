@@ -47,6 +47,12 @@ class GameRoom(db.Model):
     host = db.relationship('User', backref='hosted_rooms')
     players = db.relationship('RoomPlayer', backref='room', cascade='all, delete-orphan')
     game_session = db.relationship('GameSession', backref='room', uselist=False)
+    
+    scores = db.relationship(
+    'PlayerScore',
+    backref='room',
+    cascade='all, delete-orphan'
+)
 
 class RoomPlayer(db.Model):
     __tablename__ = 'room_players'
@@ -97,10 +103,6 @@ class PlayerScore(db.Model):
         default=datetime.utcnow
     )
 
-    user = db.relationship(
-        'User',
-        backref='scores'
-    )
 
 class QuestionCache(db.Model):
     __tablename__ = 'question_cache'
