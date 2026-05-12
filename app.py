@@ -40,8 +40,10 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 db.init_app(app)
 bcrypt.init_app(app)
 CORS(app)
+with app.app_context():
+    db.create_all()
 
-MUSIC_FOLDER = os.environ.get('MUSIC_FOLDER', r"E:\Kakak\Music\Music")
+MUSIC_FOLDER = os.environ.get(r"your\music\folder\path")  # Ganti dengan path folder musik Anda
 CACHE_FILE = 'audio_cache.json'
 HISTORY_FILE = 'game_history.json'
 
@@ -859,6 +861,9 @@ def submit_room_score(room_id):
     except Exception as e:
 
         db.session.rollback()
+
+        print('GUEST LOGIN ERROR:')
+        print(str(e))
 
         return jsonify({
             'success': False,
