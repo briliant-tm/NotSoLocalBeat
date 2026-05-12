@@ -57,6 +57,8 @@ function initMultiplayer() {
             room = data;
             document.getElementById('multiplayer-info').style.display = 'block';
             document.getElementById('room-code-display').textContent = data.room_code;
+            console.log(data);
+            console.log(data.room_code);
             const readyRoomCode = document.getElementById('ready-room-code');
             if (readyRoomCode) {
                 readyRoomCode.textContent = data.room_code;
