@@ -25,7 +25,7 @@ from urllib.parse import urljoin
 # ========================================
 # APPLICATION SETUP
 # ========================================
-app = Flask(__name__)
+app = Flask(__name__, instance_path='/tmp')
 app.secret_key = os.environ.get('SECRET_KEY', 'localbeat_vr1l_secure_key_2024')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 
