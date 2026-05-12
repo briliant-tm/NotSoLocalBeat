@@ -15,6 +15,11 @@
         <div class="hero-title">LOCALBEAT</div>
         <div class="hero-subtitle">HOST GAME SETUP</div>
 
+    <div>
+            Room Code:
+            <span id="roomCode">----</span>
+        </div>
+
         <div class="setup-container">
             <div class="setup-item">
                 <label>GAME MODE</label>
@@ -115,6 +120,10 @@
             const questionCount = document.getElementById('question-count').value;
             const result = await response.json();
 
+            document.getElementById('roomCode').innerText =
+                result.room_code;
+
+                
             console.log(result);
 
             const roomCodeElement =

@@ -521,5 +521,12 @@ def get_bgm():
     # UTILITY FUNCTIONS
     # ========================================
 
+    # ========================================
+    # UTILITY FUNCTIONS
+    # ========================================
+
     def generate_room_code():
         return "ABCD"
+
+    def load_json(filename):
+        ...
