@@ -64,6 +64,8 @@ function initMultiplayer() {
                 readyRoomCode.textContent = data.room_code;
             }
             updatePlayersList();
+
+            autoReadyHost();
             
             if (room.is_started) {
                 loadNextLevel();
@@ -114,25 +116,51 @@ function updatePlayersList() {
 }
 
 function showReadyScreen() {
+
     if (!IS_MULTIPLAYER) return;
-    
+
     overlayReady.style.display = 'flex';
+
     updatePlayersList();
-    
-    const isHost = room && room.players.some(p => p.is_host && p.username === window.currentUsername);
-    const readyBtn = document.getElementById('ready-btn');
-    
+
+    const isHost = room &&
+        room.players.some(
+            p => p.is_host &&
+            p.username === window.currentUsername
+        );
+
+    const readyBtn =
+        document.getElementById('ready-btn');
+
     if (!isHost) {
-        readyBtn.textContent = isReady ? 'UNREADY' : 'READY UP';
+
+        readyBtn.style.display = 'block';
+
+        readyBtn.textContent =
+            isReady ? 'UNREADY' : 'READY UP';
+
     } else {
+
+        // host otomatis ready
+        readyBtn.style.display = 'none';
+
         if (!document.getElementById('start-game-btn')) {
-            const startBtn = document.createElement('button');
+
+            const startBtn =
+                document.createElement('button');
+
             startBtn.id = 'start-game-btn';
+
             startBtn.className = 'btn-main';
+
             startBtn.textContent = 'START GAME';
+
             startBtn.onclick = startMultiplayerGame;
-            readyBtn.parentNode.insertBefore(startBtn, readyBtn.nextSibling);
-            readyBtn.style.display = 'none';
+
+            readyBtn.parentNode.insertBefore(
+                startBtn,
+                readyBtn.nextSibling
+            );
         }
     }
 }
@@ -156,17 +184,41 @@ function toggleReady() {
 }
 
 function startMultiplayerGame() {
-    fetch(`/api/room/${ROOM_ID}/start`, { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                gameStarted = true;
-                overlayReady.style.display = 'none';
-                loadNextLevel();
-            } else {
-                alert(data.error || 'Cannot start game');
-            }
-        });
+
+    const notReady =
+        room.players.filter(p => !p.is_ready);
+
+    if (notReady.length > 0) {
+
+        alert(
+            'All players must be ready first'
+        );
+
+        return;
+    }
+
+    fetch(`/api/room/${ROOM_ID}/start`, {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(data => {
+
+        if (data.success) {
+
+            gameStarted = true;
+
+            overlayReady.style.display = 'none';
+
+            loadNextLevel();
+
+        } else {
+
+            alert(
+                data.error ||
+                'Cannot start game'
+            );
+        }
+    });
 }
 
 // ====== QUIZ FUNCTIONS ======
@@ -478,4 +530,36 @@ function playYoutubeClip(videoUrl, startTime) {
             }
         }
     });
+}
+
+function autoReadyHost() {
+
+    if (!room) return;
+
+    const isHost = room.players.some(
+        p => p.is_host &&
+        p.username === window.currentUsername
+    );
+
+    if (!isHost) return;
+
+    fetch(`/api/room/${ROOM_ID}/ready`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            is_ready: true
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+
+        if (data.success) {
+            isReady = true;
+            console.log('HOST AUTO READY');
+        }
+
+    })
+    .catch(console.error);
 }
