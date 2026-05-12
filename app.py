@@ -29,7 +29,7 @@ app = Flask(__name__, instance_path='/tmp')
 app.secret_key = os.environ.get('SECRET_KEY', 'localbeat_vr1l_secure_key_2024')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 
-    'sqlite:///localbeat.db'
+    'sqlite:////tmp/localbeat.db'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
@@ -41,7 +41,7 @@ db.init_app(app)
 bcrypt.init_app(app)
 CORS(app)
 
-MUSIC_FOLDER = os.environ.get('MUSIC_FOLDER', r"E:\Kakak\Music\Music")
+MUSIC_FOLDER = os.environ.get('MUSIC_FOLDER', r"your_music_folder_path_here")
 CACHE_FILE = 'audio_cache.json'
 HISTORY_FILE = 'game_history.json'
 
@@ -800,7 +800,10 @@ def open_browser():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all() # Ini akan membuat tabel jika belum ada
+        try:
+            db.create_all()
+        except Exception as e:
+            print(f"Gagal inisialisasi DB: {e}")
     
     threading.Timer(1.5, open_browser).start()
     app.run(host='0.0.0.0', debug=False, port=5000)
