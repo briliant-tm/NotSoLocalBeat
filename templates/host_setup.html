@@ -118,21 +118,6 @@
             const playlistUrl = document.getElementById('playlist-url').value;
             const playerCount = document.getElementById('player-count').value;
             const questionCount = document.getElementById('question-count').value;
-            const result = await response.json();
-
-            document.getElementById('roomCode').innerText =
-                result.room_code;
-
-                
-            console.log(result);
-
-            const roomCodeElement =
-            document.getElementById('roomCode');
-
-            if (roomCodeElement) {
-            roomCodeElement.innerText =
-            result.room_code;
-        }
 
             if (musicSource === 'YOUTUBE' && !playlistUrl.trim()) {
                 errorDiv.textContent = 'YouTube playlist URL is required';
@@ -157,6 +142,7 @@
 
                 if (data.success) {
                     window.sessionStorage.setItem('current_room_id', data.room_id);
+                    document.getElementById('roomCode').textContent = data.room_code;
                     document.getElementById('roomCode').classList.add('glitch-active');
                     setTimeout(() => {
                         window.location.href = `/game/multiplayer`;
@@ -165,7 +151,7 @@
                     errorDiv.textContent = data.error || 'Failed to create room';
                 }
             } catch (e) {
-                errorDiv.textContent = 'Connection error';
+                errorDiv.textContent = 'Connection error: ' + e.message;
             }
         }
     </script>
