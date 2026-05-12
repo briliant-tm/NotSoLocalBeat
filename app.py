@@ -26,7 +26,7 @@ from urllib.parse import urljoin
 # APPLICATION SETUP
 # ========================================
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'localbeat_vr1l_secure_key_2024')
+app.secret_key = os.environ.get('SECRET_KEY', 'localbeat_vr1l_secu@re_key_2024')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 
     'sqlite:///localbeat.db'
@@ -302,37 +302,82 @@ def login():
 
 @app.route('/api/guest', methods=['POST'])
 def guest_login():
+
     try:
+
+        print('GUEST LOGIN START')
+
         data = request.json
-        guest_name = data.get('guest_name', '').strip()
-        
+
+        print('REQUEST DATA:', data)
+
+        guest_name = data.get(
+            'guest_name',
+            ''
+        ).strip()
+
+        print('GUEST NAME:', guest_name)
+
         if not guest_name or len(guest_name) < 2:
-            return jsonify({'success': False, 'error': 'Nama minimal 2 karakter'}), 400
-        
+
+            return jsonify({
+                'success': False,
+                'error': 'Nama minimal 2 karakter'
+            }), 400
+
         existing_guest = User.query.filter_by(
             username=f"guest_{guest_name}",
             is_guest=True
         ).first()
-        
+
+        print('EXISTING GUEST:', existing_guest)
+
         if existing_guest:
+
             session['user_id'] = existing_guest.id
             session.permanent = True
-            return jsonify({'success': True})
-        
+
+            return jsonify({
+                'success': True
+            })
+
         guest_user = User(
             username=f"guest_{guest_name}",
             is_guest=True
         )
+
+        print('CREATED USER OBJECT')
+
         db.session.add(guest_user)
+
+        print('ADDED TO DB')
+
         db.session.commit()
-        
+
+        print('DB COMMIT SUCCESS')
+
         session['user_id'] = guest_user.id
         session.permanent = True
-        
-        return jsonify({'success': True})
+
+        return jsonify({
+            'success': True
+        })
+
     except Exception as e:
+
         db.session.rollback()
-        return jsonify({'success': False, 'error': 'Guest login error'}), 500
+
+        import traceback
+
+        print('========== GUEST LOGIN ERROR ==========')
+        print(str(e))
+        traceback.print_exc()
+        print('=======================================')
+
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/logout')
 def logout():
@@ -800,16 +845,6 @@ def internal_error(error):
 def open_browser():
     webbrowser.open_new("http://127.0.0.1:5000")
 
-if __name__ == '__main__':
-    with app.app_context():
-        try:
-            db.create_all()
-        except:
-            pass
-    
-    threading.Timer(1.5, open_browser).start()
-    app.run(host='0.0.0.0', debug=False, port=5000)
-
 @app.route('/api/room/<int:room_id>/score', methods=['POST'])
 @require_login
 def submit_room_score(room_id):
@@ -908,3 +943,13 @@ def room_leaderboard(room_id):
         return jsonify({
             'error': str(e)
         }), 500
+    
+if __name__ == '__main__':
+    with app.app_context():
+        try:
+            db.create_all()
+        except:
+            pass
+    
+    threading.Timer(1.5, open_browser).start()
+    app.run(host='0.0.0.0', debug=False, port=5000)
