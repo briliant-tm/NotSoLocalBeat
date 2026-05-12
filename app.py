@@ -86,40 +86,40 @@ def split_artists(artist_string):
     raw_list = re.split(delimiters, artist_string, flags=re.IGNORECASE)
     return [x.strip() for x in raw_list if x.strip()]
 
-def get_all_songs():
-    songs = []
-    if not os.path.exists(MUSIC_FOLDER): 
-        return []
-    try:
-        for root, dirs, files in os.walk(MUSIC_FOLDER):
-            for file in files:
-                if file.lower().endswith(('.mp3', '.flac', '.wav', '.ogg', '.m4a')):
-                    songs.append(os.path.join(root, file))
-    except:
-        pass
-    return songs
+# def get_all_songs():
+#     songs = []
+#     if not os.path.exists(MUSIC_FOLDER): 
+#         return []
+#     try:
+#         for root, dirs, files in os.walk(MUSIC_FOLDER):
+#             for file in files:
+#                 if file.lower().endswith(('.mp3', '.flac', '.wav', '.ogg', '.m4a')):
+#                     songs.append(os.path.join(root, file))
+#     except:
+#         pass
+#     return songs
 
-def get_smart_random_song():
-    songs = get_all_songs()
-    if not songs: 
-        return None
+# def get_smart_random_song():
+#     songs = get_all_songs()
+#     if not songs: 
+#         return None
     
-    try:
-        recent = db.session.query(PlayHistory.file_path).order_by(
-            PlayHistory.played_at.desc()
-        ).limit(30).all()
-        recent_paths = [r[0] for r in recent]
-    except:
-        recent_paths = []
+#     try:
+#         recent = db.session.query(PlayHistory.file_path).order_by(
+#             PlayHistory.played_at.desc()
+#         ).limit(30).all()
+#         recent_paths = [r[0] for r in recent]
+#     except:
+#         recent_paths = []
 
-    for _ in range(10):
-        selected = random.choice(songs)
-        if selected in recent_paths:
-            if random.random() < 0.15: 
-                return selected
-        else:
-            return selected
-    return selected
+#     for _ in range(10):
+#         selected = random.choice(songs)
+#         if selected in recent_paths:
+#             if random.random() < 0.15: 
+#                 return selected
+#         else:
+#             return selected
+#     return selected
 
 def update_history(song_path, user_id=None):
     try:
@@ -595,73 +595,29 @@ def get_bgm():
     except:
         return jsonify({'error': 'Error loading music'}), 500
 
+# Di dalam app.py, ubah route /api/question
 @app.route('/api/question')
 def get_question():
     try:
         room_id = request.args.get('room_id')
         is_multiplayer = request.args.get('is_multiplayer', 'false').lower() == 'true'
         
-        user = get_current_user()
-        
+        # Logika Singleplayer sekarang dipaksa menggunakan YouTube
+        if not is_multiplayer:
+            # Anda bisa menentukan playlist default untuk singleplayer di sini
+            default_playlist = "URL_PLAYLIST_DEFAULT_ANDA" 
+            return get_youtube_question_logic(default_playlist)
+
+        # Logika Multiplayer
         if is_multiplayer and room_id:
             room = GameRoom.query.get(int(room_id))
-            if room and room.music_source == 'YOUTUBE':
+            if room:
                 return get_youtube_question(room)
         
-        target = get_smart_random_song()
-        if not target:
-            return jsonify({'error': 'Empty DB'}), 404
-        
-        if user:
-            update_history(target, user.id)
-        
-        session['quiz_path'] = target
-        dur = get_duration(target)
-        
-        roll = random.random()
-        start, mode = 0, "RANDOM"
-        if roll <= 0.2:
-            start, mode = 0, "INTRO"
-        elif roll <= 0.4:
-            start, mode = max(0, dur - 30), "OUTRO"
-        else:
-            drop = analyze_drop(target, dur)
-            start, mode = max(0, drop - 5), "CLIMAX"
-        
-        session['start_time'] = start
-        
-        clean_name = get_clean_name(target)
-        folder_name = os.path.basename(os.path.dirname(target))
-        
-        all_songs = get_all_songs()
-        options = [clean_name]
-        while len(options) < 4:
-            s = random.choice(all_songs)
-            n = get_clean_name(s)
-            if n not in options:
-                options.append(n)
-        random.shuffle(options)
-        
-        is_foreign_file = is_foreign(clean_name)
-        artist, title = parse_artist_title(clean_name)
-        has_separator = artist is not None
-        
-        typing_type = "NORMAL"
-        if is_foreign_file or not has_separator:
-            typing_type = "FOLDER"
-        
-        return jsonify({
-            'clue': folder_name,
-            'options': options,
-            'mode': mode,
-            'start_time': start,
-            'duration': dur,
-            'typing_type': typing_type,
-            'source': 'LOCAL'
-        })
+        return jsonify({'error': 'Invalid setup'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+    
 def get_youtube_question(room):
     """Generate question from YouTube playlist"""
     try:
