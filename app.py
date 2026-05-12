@@ -516,3 +516,10 @@ def get_bgm():
         return jsonify({
             'error': 'Error loading music'
         }), 500
+    
+    # ========================================
+    # UTILITY FUNCTIONS
+    # ========================================
+
+    def generate_room_code():
+        return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
