@@ -72,15 +72,35 @@ class GameSession(db.Model):
 
 class PlayerScore(db.Model):
     __tablename__ = 'player_scores'
-    id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.Integer, db.ForeignKey('game_sessions.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    question_number = db.Column(db.Integer, nullable=False)
-    score_gained = db.Column(db.Integer, default=0)
-    answered = db.Column(db.String(500), nullable=True)
-    correct_answer = db.Column(db.String(500), nullable=True)
-    is_correct = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    room_id = db.Column(
+        db.Integer,
+        db.ForeignKey('game_rooms.id')
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id')
+    )
+
+    score = db.Column(
+        db.Integer,
+        default=0
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    user = db.relationship(
+        'User',
+        backref='scores'
+    )
 
 class QuestionCache(db.Model):
     __tablename__ = 'question_cache'

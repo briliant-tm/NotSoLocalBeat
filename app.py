@@ -807,3 +807,99 @@ if __name__ == '__main__':
     
     threading.Timer(1.5, open_browser).start()
     app.run(host='0.0.0.0', debug=False, port=5000)
+
+@app.route('/api/room/<int:room_id>/score', methods=['POST'])
+@require_login
+def submit_room_score(room_id):
+
+    try:
+
+        user = get_current_user()
+
+        room = GameRoom.query.get(room_id)
+
+        if not room:
+            return jsonify({
+                'success': False,
+                'error': 'Room not found'
+            }), 404
+
+        data = request.json
+
+        final_score = int(
+            data.get('score', 0)
+        )
+
+        # cek apakah sudah ada score
+        existing = PlayerScore.query.filter_by(
+            room_id=room_id,
+            user_id=user.id
+        ).first()
+
+        if existing:
+
+            existing.score = final_score
+
+        else:
+
+            score = PlayerScore(
+                room_id=room_id,
+                user_id=user.id,
+                score=final_score
+            )
+
+            db.session.add(score)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True
+        })
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+    
+@app.route('/api/room/<int:room_id>/leaderboard')
+@require_login
+def room_leaderboard(room_id):
+
+    try:
+
+        room = GameRoom.query.get(room_id)
+
+        if not room:
+            return jsonify({
+                'error': 'Room not found'
+            }), 404
+
+        scores = (
+            db.session.query(PlayerScore)
+            .filter_by(room_id=room_id)
+            .order_by(PlayerScore.score.desc())
+            .all()
+        )
+
+        leaderboard = []
+
+        for s in scores:
+
+            leaderboard.append({
+                'username': s.user.username,
+                'score': s.score
+            })
+
+        return jsonify({
+            'leaderboard': leaderboard
+        })
+
+    except Exception as e:
+
+        return jsonify({
+            'error': str(e)
+        }), 500

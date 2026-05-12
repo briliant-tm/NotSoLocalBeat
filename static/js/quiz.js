@@ -223,7 +223,7 @@ function startMultiplayerGame() {
 
 // ====== QUIZ FUNCTIONS ======
 
-function loadNextLevel() {
+async function loadNextLevel() {
     if (currentQ >= TOTAL_QUESTIONS) {
         document.getElementById('final-score').innerText = score;
         
@@ -232,6 +232,10 @@ function loadNextLevel() {
             leaderboard.innerHTML = '<div style="font-size: 0.9rem; margin-top: 10px;">ROOM: ' + room.room_code + '</div>';
         }
         
+        await submitFinalScore();
+
+        await loadLeaderboard();
+
         overlayOver.style.display = 'flex';
         clearInterval(pollInterval);
         return;
@@ -562,4 +566,86 @@ function autoReadyHost() {
 
     })
     .catch(console.error);
+}
+
+async function submitFinalScore() {
+
+    if (!IS_MULTIPLAYER || !ROOM_ID)
+        return;
+
+    try {
+
+        await fetch(
+            `/api/room/${ROOM_ID}/score`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type':
+                        'application/json'
+                },
+                body: JSON.stringify({
+                    username:
+                        window.currentUsername,
+                    score: score
+                })
+            }
+        );
+
+    } catch(e) {
+
+        console.error(
+            'Score submit failed',
+            e
+        );
+    }
+}
+
+async function loadLeaderboard() {
+
+    if (!IS_MULTIPLAYER || !ROOM_ID)
+        return;
+
+    try {
+
+        const res = await fetch(
+            `/api/room/${ROOM_ID}/leaderboard`
+        );
+
+        const data = await res.json();
+
+        const leaderboard =
+            document.getElementById(
+                'final-leaderboard'
+            );
+
+        leaderboard.innerHTML = '';
+
+        data.leaderboard.forEach(
+            (player, index) => {
+
+            const div =
+                document.createElement('div');
+
+            div.style.margin =
+                '10px 0';
+
+            div.style.fontSize =
+                '1rem';
+
+            div.innerHTML = `
+                #${index + 1}
+                ${player.username}
+                - ${player.score}
+            `;
+
+            leaderboard.appendChild(div);
+        });
+
+    } catch(e) {
+
+        console.error(
+            'Leaderboard failed',
+            e
+        );
+    }
 }
