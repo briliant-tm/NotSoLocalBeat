@@ -434,7 +434,7 @@ def create_room():
             'room_id': room.id,
             'room_code': room.room_code,
             'host': room.host_id,
-            'players': players
+            # 'players': players
         })
     except Exception as e:
         db.session.rollback()
