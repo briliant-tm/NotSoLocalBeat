@@ -57,6 +57,10 @@ function initMultiplayer() {
             room = data;
             document.getElementById('multiplayer-info').style.display = 'block';
             document.getElementById('room-code-display').textContent = data.room_code;
+            const readyRoomCode = document.getElementById('ready-room-code');
+            if (readyRoomCode) {
+                readyRoomCode.textContent = data.room_code;
+            }
             updatePlayersList();
             
             if (room.is_started) {
@@ -199,8 +203,12 @@ function loadNextLevel() {
                 return;
             }
             nextData = data;
-            audio.src = `/stream_audio?type=quiz&t=${Date.now()}`;
-            audio.load();
+            if (data.source === 'YOUTUBE') {
+                nextData = data;
+            } else {
+                audio.src = `/stream_audio?type=quiz&t=${Date.now()}`;
+                audio.load();
+            }
         })
         .catch(e => {
             console.error('Error:', e);
@@ -267,13 +275,29 @@ function setupRound() {
 }
 
 function playAudio() {
-    if(replays <= 0) return;
+    if (replays <= 0) return;
+
+    if (nextData.source === 'YOUTUBE') {
+        playYoutubeClip(nextData.youtube_url, nextData.start_time);
+
+        isPlaying = true;
+        replayBtn.disabled = true;
+        replayBtn.innerText = "LISTENING...";
+
+        setTimeout(() => {
+            if (ytPlayer) ytPlayer.pauseVideo();
+            handleClipEnd();
+        }, 15000);
+
+        return;
+    }
+
     if(audioCtx.state === 'suspended') audioCtx.resume();
-    
+
     audio.currentTime = nextData.start_time;
     audio.volume = 0;
     audio.play();
-    
+
     let vol = 0;
     const fade = setInterval(()=>{
         if(vol < 1.0) { vol+=0.1; audio.volume = Math.min(1,vol); }
@@ -283,7 +307,7 @@ function playAudio() {
     isPlaying = true;
     replayBtn.disabled = true;
     replayBtn.innerText = "LISTENING...";
-    
+
     cancelAnimationFrame(animId);
     updateGameLoop();
 }
@@ -375,7 +399,8 @@ function submit(ans, uiElement) {
         answer: ans,
         game_mode: MODE,
         typing_type: nextData.typing_type,
-        source: nextData.source || 'LOCAL'
+        source: nextData.source || 'LOCAL',
+        correct_title: nextData.title || ''
     };
 
     fetch('/submit_answer', {
@@ -413,3 +438,44 @@ function submit(ans, uiElement) {
 window.addEventListener('beforeunload', () => {
     if (pollInterval) clearInterval(pollInterval);
 });
+
+let ytPlayer = null;
+
+function getYoutubeVideoId(url) {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes('youtu.be')) {
+        return parsed.pathname.slice(1);
+    }
+    return parsed.searchParams.get('v');
+}
+
+function playYoutubeClip(videoUrl, startTime) {
+    const videoId = getYoutubeVideoId(videoUrl);
+
+    document.getElementById('youtube-player').style.display = 'block';
+
+    if (ytPlayer) {
+        ytPlayer.loadVideoById({
+            videoId,
+            startSeconds: startTime
+        });
+        return;
+    }
+
+    ytPlayer = new YT.Player('youtube-player', {
+        height: '0',
+        width: '0',
+        videoId,
+        playerVars: {
+            autoplay: 1,
+            start: Math.floor(startTime),
+            controls: 0,
+            modestbranding: 1
+        },
+        events: {
+            onReady: (event) => {
+                event.target.playVideo();
+            }
+        }
+    });
+}

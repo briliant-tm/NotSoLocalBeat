@@ -32,6 +32,9 @@
     <!-- READY SCREEN (MULTIPLAYER) -->
     <div id="overlay-ready" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: rgba(0,0,0,0.95); justify-content: center; align-items: center; flex-direction: column; display: none;">
         <h1 style="font-family: 'Orbitron'; font-size: 3rem;">WAITING FOR PLAYERS</h1>
+        <div style="margin-top: 20px; font-size: 1.2rem; color: #888;">
+                ROOM CODE: <span id="room-code"></span>
+            </div>
         <div id="ready-players" style="margin-top: 30px; font-size: 1.2rem;"></div>
         <button class="btn-main" id="ready-btn" onclick="toggleReady()" style="margin-top: 30px;">READY UP</button>
     </div>
@@ -72,5 +75,9 @@
 
     <audio id="game-audio" crossorigin="anonymous"></audio>
     <script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
+
+    <div id="youtube-player" style="display:none;"></div>
+        <script src="https://www.youtube.com/iframe_api"></script>
+
 </body>
 </html>
