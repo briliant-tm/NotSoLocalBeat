@@ -76,84 +76,112 @@
         </div>
     </div>
 
-         <form id="hostForm">
+    <div class="room-code-container">
+    <p>ROOM CODE</p>
 
-        <!-- setting room -->
-
-        <button id="createRoomBtn" type="submit">
-        Create Room
-        </button>
-
-        <!-- TAMBAHKAN DI SINI -->
-        <div class="room-code-container">
-        <p>Room Code:</p>
-
-        <span id="roomCode">
-            ------
-        </span>
-    </div>
-
-</form>
+    <span id="roomCode">
+        WAITING...
+    </span>
+</div>
 
     <audio id="bgm-player" crossorigin="anonymous"></audio>
     <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
     <script>
-        function updateQCount() {
-            document.getElementById('q-display').textContent = document.getElementById('question-count').value;
+    function updateQCount() {
+        document.getElementById('q-display').textContent =
+            document.getElementById('question-count').value;
+    }
+
+    function toggleYoutube() {
+        const source = document.getElementById('music-source').value;
+        const youtubeInput = document.getElementById('youtube-input');
+
+        youtubeInput.style.display =
+            source === 'YOUTUBE' ? 'block' : 'none';
+    }
+
+    async function createRoom() {
+        const errorDiv = document.getElementById('error-msg');
+        const roomCodeEl = document.getElementById('roomCode');
+
+        errorDiv.textContent = '';
+
+        roomCodeEl.textContent = 'CREATING...';
+
+        const mode = document.getElementById('game-mode').value;
+        const gameType = document.getElementById('game-type').value;
+        const musicSource = document.getElementById('music-source').value;
+        const playlistUrl = document.getElementById('playlist-url').value;
+        const playerCount = document.getElementById('player-count').value;
+        const questionCount = document.getElementById('question-count').value;
+
+        if (musicSource === 'YOUTUBE' && !playlistUrl.trim()) {
+            errorDiv.textContent =
+                'YouTube playlist URL is required';
+
+            roomCodeEl.textContent = 'WAITING...';
+
+            return;
         }
 
-        function toggleYoutube() {
-            const source = document.getElementById('music-source').value;
-            const youtubeInput = document.getElementById('youtube-input');
-            youtubeInput.style.display = source === 'YOUTUBE' ? 'block' : 'none';
-        }
+        try {
+            const res = await fetch('/api/room/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    mode,
+                    game_type: gameType,
+                    max_players: playerCount,
+                    music_source: musicSource,
+                    youtube_url: playlistUrl,
+                    question_count: questionCount
+                })
+            });
 
-        async function createRoom() {
-            const errorDiv = document.getElementById('error-msg');
-            errorDiv.textContent = '';
+            const data = await res.json();
 
-            const mode = document.getElementById('game-mode').value;
-            const gameType = document.getElementById('game-type').value;
-            const musicSource = document.getElementById('music-source').value;
-            const playlistUrl = document.getElementById('playlist-url').value;
-            const playerCount = document.getElementById('player-count').value;
-            const questionCount = document.getElementById('question-count').value;
+            if (data.success) {
 
-            if (musicSource === 'YOUTUBE' && !playlistUrl.trim()) {
-                errorDiv.textContent = 'YouTube playlist URL is required';
-                return;
+                // simpan room data
+                sessionStorage.setItem(
+                    'current_room_id',
+                    data.room_id
+                );
+
+                sessionStorage.setItem(
+                    'current_room_code',
+                    data.room_code
+                );
+
+                // tampilkan room code langsung
+                roomCodeEl.textContent = data.room_code;
+
+                roomCodeEl.classList.add('glitch-active');
+
+                // redirect agak lama supaya terlihat
+                setTimeout(() => {
+                    window.location.href =
+                        `/game/multiplayer`;
+                }, 2000);
+
+            } else {
+
+                errorDiv.textContent =
+                    data.error || 'Failed to create room';
+
+                roomCodeEl.textContent = 'ERROR';
             }
 
-            try {
-                const res = await fetch('/api/room/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        mode,
-                        game_type: gameType,
-                        max_players: playerCount,
-                        music_source: musicSource,
-                        youtube_url: playlistUrl,
-                        question_count: questionCount
-                    })
-                });
+        } catch (e) {
 
-                const data = await res.json();
+            errorDiv.textContent =
+                'Connection error: ' + e.message;
 
-                if (data.success) {
-                    window.sessionStorage.setItem('current_room_id', data.room_id);
-                    document.getElementById('roomCode').textContent = data.room_code;
-                    document.getElementById('roomCode').classList.add('glitch-active');
-                    setTimeout(() => {
-                        window.location.href = `/game/multiplayer`;
-                    }, 300);
-                } else {
-                    errorDiv.textContent = data.error || 'Failed to create room';
-                }
-            } catch (e) {
-                errorDiv.textContent = 'Connection error: ' + e.message;
-            }
+            roomCodeEl.textContent = 'FAILED';
         }
-    </script>
+    }
+</script>
 </body>
 </html>

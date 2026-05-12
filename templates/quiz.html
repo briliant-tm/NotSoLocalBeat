@@ -79,5 +79,48 @@
     <div id="youtube-player" style="display:none;"></div>
         <script src="https://www.youtube.com/iframe_api"></script>
 
+        <script>
+    window.addEventListener('DOMContentLoaded', () => {
+
+        // ambil room code dari session storage
+        const roomCode =
+            sessionStorage.getItem('current_room_code');
+
+        // ambil room id jika perlu
+        const roomId =
+            sessionStorage.getItem('current_room_id');
+
+        console.log('ROOM CODE:', roomCode);
+        console.log('ROOM ID:', roomId);
+
+        // tampilkan multiplayer panel
+        const multiplayerInfo =
+            document.getElementById('multiplayer-info');
+
+        if (multiplayerInfo) {
+            multiplayerInfo.style.display = 'block';
+        }
+
+        // READY SCREEN ROOM CODE
+        const readyRoomCode =
+            document.getElementById('room-code');
+
+        if (readyRoomCode) {
+            readyRoomCode.textContent =
+                roomCode || '----';
+        }
+
+        // TOP LEFT ROOM CODE
+        const roomCodeDisplay =
+            document.getElementById('room-code-display');
+
+        if (roomCodeDisplay) {
+            roomCodeDisplay.textContent =
+                roomCode || '----';
+        }
+
+    });
+</script>
+
 </body>
 </html>
