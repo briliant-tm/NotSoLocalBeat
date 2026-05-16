@@ -48,6 +48,12 @@ class GameRoom(db.Model):
     players = db.relationship('RoomPlayer', backref='room', cascade='all, delete-orphan')
     game_session = db.relationship('GameSession', backref='room', uselist=False)
 
+    scores = db.relationship(
+    'PlayerScore',
+    backref='room',
+    cascade='all, delete-orphan'
+)
+
 class RoomPlayer(db.Model):
     __tablename__ = 'room_players'
     id = db.Column(db.Integer, primary_key=True)
@@ -68,19 +74,34 @@ class GameSession(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     finished_at = db.Column(db.DateTime, nullable=True)
     
-    player_scores = db.relationship('PlayerScore', backref='session', cascade='all, delete-orphan')
 
 class PlayerScore(db.Model):
     __tablename__ = 'player_scores'
-    id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.Integer, db.ForeignKey('game_sessions.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    question_number = db.Column(db.Integer, nullable=False)
-    score_gained = db.Column(db.Integer, default=0)
-    answered = db.Column(db.String(500), nullable=True)
-    correct_answer = db.Column(db.String(500), nullable=True)
-    is_correct = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    room_id = db.Column(
+        db.Integer,
+        db.ForeignKey('game_rooms.id')
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id')
+    )
+
+    score = db.Column(
+        db.Integer,
+        default=0
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
 
 class QuestionCache(db.Model):
     __tablename__ = 'question_cache'

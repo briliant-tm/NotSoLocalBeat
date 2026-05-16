@@ -35,7 +35,8 @@
             <div class="setup-item">
                 <label>MUSIC SOURCE</label>
                 <select id="music-source" class="setup-select">
-                    <option value="LOCAL">LOCAL FOLDER</option>
+                    <label>YOUTUBE PLAYLIST URL</label>
+                    <input type="text" id="playlist-url" placeholder="Paste YouTube Playlist URL here..." class="setup-input">
                 </select>
             </div>
 
@@ -50,19 +51,19 @@
     <audio id="bgm-player" crossorigin="anonymous"></audio>
     <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
     <script>
-        function updateQCount() {
-            document.getElementById('q-display').textContent = document.getElementById('question-count').value;
-        }
+function startSingleplayer() {
+    const mode = document.getElementById('game-mode').value;
+    const count = document.getElementById('question-count').value;
+    const playlistUrl = document.getElementById('playlist-url').value;
 
-        function startSingleplayer() {
-            const mode = document.getElementById('game-mode').value;
-            const count = document.getElementById('question-count').value;
-            
-            document.getElementById('glitch-layer').classList.add('glitch-active');
-            setTimeout(() => {
-                window.location.href = `/game/singleplayer?count=${count}&mode=${mode}`;
-            }, 300);
-        }
-    </script>
+    if (!playlistUrl) {
+        alert("Harap masukkan URL Playlist YouTube!");
+        return;
+    }
+
+    // Simpan URL ke session atau kirim via parameter
+    window.location.href = `/game/singleplayer?count=${count}&mode=${mode}&url=${encodeURIComponent(playlistUrl)}`;
+}
+</script>
 </body>
 </html>

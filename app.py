@@ -25,8 +25,8 @@ from urllib.parse import urljoin
 # ========================================
 # APPLICATION SETUP
 # ========================================
-app = Flask(__name__, instance_path='/tmp')
-app.secret_key = os.environ.get('SECRET_KEY', 'localbeat_vr1l_secure_key_2024')
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'localbeat_vr1l_secu@re_key_2024')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 
     'sqlite:///localbeat.db'
@@ -40,8 +40,10 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 db.init_app(app)
 bcrypt.init_app(app)
 CORS(app)
+with app.app_context():
+    db.create_all()
 
-MUSIC_FOLDER = os.environ.get('MUSIC_FOLDER', r"E:\Kakak\Music\Music")
+MUSIC_FOLDER = os.environ.get(r"your\music\folder\path")  # Ganti dengan path folder musik Anda
 CACHE_FILE = 'audio_cache.json'
 HISTORY_FILE = 'game_history.json'
 
@@ -300,37 +302,82 @@ def login():
 
 @app.route('/api/guest', methods=['POST'])
 def guest_login():
+
     try:
+
+        print('GUEST LOGIN START')
+
         data = request.json
-        guest_name = data.get('guest_name', '').strip()
-        
+
+        print('REQUEST DATA:', data)
+
+        guest_name = data.get(
+            'guest_name',
+            ''
+        ).strip()
+
+        print('GUEST NAME:', guest_name)
+
         if not guest_name or len(guest_name) < 2:
-            return jsonify({'success': False, 'error': 'Nama minimal 2 karakter'}), 400
-        
+
+            return jsonify({
+                'success': False,
+                'error': 'Nama minimal 2 karakter'
+            }), 400
+
         existing_guest = User.query.filter_by(
             username=f"guest_{guest_name}",
             is_guest=True
         ).first()
-        
+
+        print('EXISTING GUEST:', existing_guest)
+
         if existing_guest:
+
             session['user_id'] = existing_guest.id
             session.permanent = True
-            return jsonify({'success': True})
-        
+
+            return jsonify({
+                'success': True
+            })
+
         guest_user = User(
             username=f"guest_{guest_name}",
             is_guest=True
         )
+
+        print('CREATED USER OBJECT')
+
         db.session.add(guest_user)
+
+        print('ADDED TO DB')
+
         db.session.commit()
-        
+
+        print('DB COMMIT SUCCESS')
+
         session['user_id'] = guest_user.id
         session.permanent = True
-        
-        return jsonify({'success': True})
+
+        return jsonify({
+            'success': True
+        })
+
     except Exception as e:
+
         db.session.rollback()
-        return jsonify({'success': False, 'error': 'Guest login error'}), 500
+
+        import traceback
+
+        print('========== GUEST LOGIN ERROR ==========')
+        print(str(e))
+        traceback.print_exc()
+        print('=======================================')
+
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/logout')
 def logout():
@@ -798,6 +845,105 @@ def internal_error(error):
 def open_browser():
     webbrowser.open_new("http://127.0.0.1:5000")
 
+@app.route('/api/room/<int:room_id>/score', methods=['POST'])
+@require_login
+def submit_room_score(room_id):
+
+    try:
+
+        user = get_current_user()
+
+        room = GameRoom.query.get(room_id)
+
+        if not room:
+            return jsonify({
+                'success': False,
+                'error': 'Room not found'
+            }), 404
+
+        data = request.json
+
+        final_score = int(
+            data.get('score', 0)
+        )
+
+        # cek apakah sudah ada score
+        existing = PlayerScore.query.filter_by(
+            room_id=room_id,
+            user_id=user.id
+        ).first()
+
+        if existing:
+
+            existing.score = final_score
+
+        else:
+
+            score = PlayerScore(
+                room_id=room_id,
+                user_id=user.id,
+                score=final_score
+            )
+
+            db.session.add(score)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True
+        })
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        print('GUEST LOGIN ERROR:')
+        print(str(e))
+
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+    
+@app.route('/api/room/<int:room_id>/leaderboard')
+@require_login
+def room_leaderboard(room_id):
+
+    try:
+
+        room = GameRoom.query.get(room_id)
+
+        if not room:
+            return jsonify({
+                'error': 'Room not found'
+            }), 404
+
+        scores = (
+            db.session.query(PlayerScore)
+            .filter_by(room_id=room_id)
+            .order_by(PlayerScore.score.desc())
+            .all()
+        )
+
+        leaderboard = []
+
+        for s in scores:
+
+            leaderboard.append({
+                'username': s.user.username,
+                'score': s.score
+            })
+
+        return jsonify({
+            'leaderboard': leaderboard
+        })
+
+    except Exception as e:
+
+        return jsonify({
+            'error': str(e)
+        }), 500
+    
 if __name__ == '__main__':
     with app.app_context():
         try:

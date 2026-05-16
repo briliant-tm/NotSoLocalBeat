@@ -57,7 +57,15 @@ function initMultiplayer() {
             room = data;
             document.getElementById('multiplayer-info').style.display = 'block';
             document.getElementById('room-code-display').textContent = data.room_code;
+            console.log(data);
+            console.log(data.room_code);
+            const readyRoomCode = document.getElementById('ready-room-code');
+            if (readyRoomCode) {
+                readyRoomCode.textContent = data.room_code;
+            }
             updatePlayersList();
+
+            autoReadyHost();
             
             if (room.is_started) {
                 loadNextLevel();
@@ -108,25 +116,51 @@ function updatePlayersList() {
 }
 
 function showReadyScreen() {
+
     if (!IS_MULTIPLAYER) return;
-    
+
     overlayReady.style.display = 'flex';
+
     updatePlayersList();
-    
-    const isHost = room && room.players.some(p => p.is_host && p.username === window.currentUsername);
-    const readyBtn = document.getElementById('ready-btn');
-    
+
+    const isHost = room &&
+        room.players.some(
+            p => p.is_host &&
+            p.username === window.currentUsername
+        );
+
+    const readyBtn =
+        document.getElementById('ready-btn');
+
     if (!isHost) {
-        readyBtn.textContent = isReady ? 'UNREADY' : 'READY UP';
+
+        readyBtn.style.display = 'block';
+
+        readyBtn.textContent =
+            isReady ? 'UNREADY' : 'READY UP';
+
     } else {
+
+        // host otomatis ready
+        readyBtn.style.display = 'none';
+
         if (!document.getElementById('start-game-btn')) {
-            const startBtn = document.createElement('button');
+
+            const startBtn =
+                document.createElement('button');
+
             startBtn.id = 'start-game-btn';
+
             startBtn.className = 'btn-main';
+
             startBtn.textContent = 'START GAME';
+
             startBtn.onclick = startMultiplayerGame;
-            readyBtn.parentNode.insertBefore(startBtn, readyBtn.nextSibling);
-            readyBtn.style.display = 'none';
+
+            readyBtn.parentNode.insertBefore(
+                startBtn,
+                readyBtn.nextSibling
+            );
         }
     }
 }
@@ -150,22 +184,46 @@ function toggleReady() {
 }
 
 function startMultiplayerGame() {
-    fetch(`/api/room/${ROOM_ID}/start`, { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                gameStarted = true;
-                overlayReady.style.display = 'none';
-                loadNextLevel();
-            } else {
-                alert(data.error || 'Cannot start game');
-            }
-        });
+
+    const notReady =
+        room.players.filter(p => !p.is_ready);
+
+    if (notReady.length > 0) {
+
+        alert(
+            'All players must be ready first'
+        );
+
+        return;
+    }
+
+    fetch(`/api/room/${ROOM_ID}/start`, {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(data => {
+
+        if (data.success) {
+
+            gameStarted = true;
+
+            overlayReady.style.display = 'none';
+
+            loadNextLevel();
+
+        } else {
+
+            alert(
+                data.error ||
+                'Cannot start game'
+            );
+        }
+    });
 }
 
 // ====== QUIZ FUNCTIONS ======
 
-function loadNextLevel() {
+async function loadNextLevel() {
     if (currentQ >= TOTAL_QUESTIONS) {
         document.getElementById('final-score').innerText = score;
         
@@ -174,6 +232,10 @@ function loadNextLevel() {
             leaderboard.innerHTML = '<div style="font-size: 0.9rem; margin-top: 10px;">ROOM: ' + room.room_code + '</div>';
         }
         
+        await submitFinalScore();
+
+        await loadLeaderboard();
+
         overlayOver.style.display = 'flex';
         clearInterval(pollInterval);
         return;
@@ -199,8 +261,10 @@ function loadNextLevel() {
                 return;
             }
             nextData = data;
-            audio.src = `/stream_audio?type=quiz&t=${Date.now()}`;
-            audio.load();
+            if (nextData.source !== 'YOUTUBE') {
+                audio.src = `/stream_audio?type=quiz&t=${Date.now()}`;
+                audio.load();
+            }
         })
         .catch(e => {
             console.error('Error:', e);
@@ -267,13 +331,29 @@ function setupRound() {
 }
 
 function playAudio() {
-    if(replays <= 0) return;
+    if (replays <= 0) return;
+
+    if (nextData.source === 'YOUTUBE') {
+        playYoutubeClip(nextData.youtube_url, nextData.start_time);
+
+        isPlaying = true;
+        replayBtn.disabled = true;
+        replayBtn.innerText = "LISTENING...";
+
+        setTimeout(() => {
+            if (ytPlayer) ytPlayer.pauseVideo();
+            handleClipEnd();
+        }, 15000);
+
+        return;
+    }
+
     if(audioCtx.state === 'suspended') audioCtx.resume();
-    
+
     audio.currentTime = nextData.start_time;
     audio.volume = 0;
     audio.play();
-    
+
     let vol = 0;
     const fade = setInterval(()=>{
         if(vol < 1.0) { vol+=0.1; audio.volume = Math.min(1,vol); }
@@ -283,7 +363,7 @@ function playAudio() {
     isPlaying = true;
     replayBtn.disabled = true;
     replayBtn.innerText = "LISTENING...";
-    
+
     cancelAnimationFrame(animId);
     updateGameLoop();
 }
@@ -375,7 +455,8 @@ function submit(ans, uiElement) {
         answer: ans,
         game_mode: MODE,
         typing_type: nextData.typing_type,
-        source: nextData.source || 'LOCAL'
+        source: nextData.source || 'LOCAL',
+        correct_title: nextData.title || ''
     };
 
     fetch('/submit_answer', {
@@ -413,3 +494,158 @@ function submit(ans, uiElement) {
 window.addEventListener('beforeunload', () => {
     if (pollInterval) clearInterval(pollInterval);
 });
+
+let ytPlayer = null;
+
+function getYoutubeVideoId(url) {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes('youtu.be')) {
+        return parsed.pathname.slice(1);
+    }
+    return parsed.searchParams.get('v');
+}
+
+function playYoutubeClip(videoUrl, startTime) {
+    const videoId = getYoutubeVideoId(videoUrl);
+
+    document.getElementById('youtube-player').style.display = 'block';
+
+    if (ytPlayer) {
+        ytPlayer.loadVideoById({
+            videoId,
+            startSeconds: startTime
+        });
+        return;
+    }
+
+    ytPlayer = new YT.Player('youtube-player', {
+        height: '0',
+        width: '0',
+        videoId,
+        playerVars: {
+            autoplay: 1,
+            start: Math.floor(startTime),
+            controls: 0,
+            modestbranding: 1
+        },
+        events: {
+            onReady: (event) => {
+                event.target.playVideo();
+            }
+        }
+    });
+}
+
+function autoReadyHost() {
+
+    if (!room) return;
+
+    const isHost = room.players.some(
+        p => p.is_host &&
+        p.username === window.currentUsername
+    );
+
+    if (!isHost) return;
+
+    fetch(`/api/room/${ROOM_ID}/ready`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            is_ready: true
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+
+        if (data.success) {
+            isReady = true;
+            console.log('HOST AUTO READY');
+        }
+
+    })
+    .catch(console.error);
+}
+
+async function submitFinalScore() {
+
+    if (!IS_MULTIPLAYER || !ROOM_ID)
+        return;
+
+    try {
+
+        await fetch(
+            `/api/room/${ROOM_ID}/score`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type':
+                        'application/json'
+                },
+                body: JSON.stringify({
+                    username:
+                        window.currentUsername,
+                    score: score
+                })
+            }
+        );
+
+    } catch(e) {
+
+        console.error(
+            'Score submit failed',
+            e
+        );
+    }
+}
+
+async function loadLeaderboard() {
+
+    if (!IS_MULTIPLAYER || !ROOM_ID)
+        return;
+
+    try {
+
+        const res = await fetch(
+            `/api/room/${ROOM_ID}/leaderboard`
+        );
+
+        const data = await res.json();
+
+        const leaderboard =
+            document.getElementById(
+                'final-leaderboard'
+            );
+
+        leaderboard.innerHTML = '';
+
+        data.leaderboard.forEach(
+            (player, index) => {
+
+            const div =
+                document.createElement('div');
+
+            div.style.margin =
+                '10px 0';
+
+            div.style.fontSize =
+                '1rem';
+
+            div.innerHTML = `
+                #${index + 1}
+                ${player.username}
+                - ${player.score}
+            `;
+
+            leaderboard.appendChild(div);
+        });
+
+    } catch(e) {
+
+        console.error(
+            'Leaderboard failed',
+            e
+        );
+    }
+}
