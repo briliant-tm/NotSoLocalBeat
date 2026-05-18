@@ -530,7 +530,7 @@ def multiplayer_game():
     if not room:
         return redirect(url_for('multiplayer_page'))
     
-    return render_template('quiz.html', user=user, is_multiplayer=True, room_id=room_id)
+    return render_template('quiz.html', user=user, is_multiplayer=True, room_id=room_id, game_mode=room.mode, question_count=room.question_count)
 
 @app.route('/api/room/<int:room_id>')
 @require_login

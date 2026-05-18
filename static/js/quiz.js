@@ -1,9 +1,24 @@
 const urlParams = new URLSearchParams(window.location.search);
 const TOTAL_QUESTIONS = parseInt(window.questionCount || urlParams.get('count') || 10);
-const MODE = (window.gameMode || urlParams.get('mode') || 'CLASSIC').toUpperCase();
+
+// Ensure MODE is properly detected from either template variable or URL parameter
+let MODE = 'CLASSIC';
+if (window.gameMode && window.gameMode.trim() !== '') {
+    MODE = window.gameMode.toUpperCase();
+} else if (urlParams.get('mode')) {
+    MODE = urlParams.get('mode').toUpperCase();
+}
+
 const YOUTUBE_URL = urlParams.get('url') || '';
 const IS_MULTIPLAYER = document.currentScript?.getAttribute('data-multiplayer') === 'true' || window.location.pathname === '/game/multiplayer';
 const ROOM_ID = window.sessionStorage.getItem('current_room_id') || null;
+
+console.log('DEBUG MODE DETECTION:');
+console.log('  window.gameMode:', window.gameMode, '(type:', typeof window.gameMode + ')');
+console.log('  urlParams.get(mode):', urlParams.get('mode'));
+console.log('  Calculated MODE:', MODE);
+console.log('  IS_MULTIPLAYER:', IS_MULTIPLAYER);
+console.log('  Location:', window.location.href);
 
 let currentQ = 0;
 let score = 0;
@@ -295,9 +310,16 @@ function setupRound() {
     document.getElementById('clue-text').innerText = nextData.clue;
     document.getElementById('mode-badge').innerText = nextData.mode;
     
+    console.log('SETUP ROUND DEBUG:');
+    console.log('  MODE variable:', MODE);
+    console.log('  MODE type:', typeof MODE);
+    console.log('  MODE === "CLASSIC":', MODE === 'CLASSIC');
+    console.log('  MODE === "TYPING":', MODE === 'TYPING');
+    
     container.innerHTML = '';
     
     if (MODE === 'CLASSIC') {
+        console.log('Creating CLASSIC mode interface');
         const grid = document.createElement('div');
         grid.className = 'options-grid';
         nextData.options.forEach(opt => {
@@ -310,6 +332,7 @@ function setupRound() {
         container.appendChild(grid);
     } 
     else if (MODE === 'TYPING') {
+        console.log('Creating TYPING mode interface');
         const wrapper = document.createElement('div');
         wrapper.className = 'typing-container';
         
@@ -329,6 +352,9 @@ function setupRound() {
         wrapper.appendChild(input);
         container.appendChild(wrapper);
         setTimeout(() => input.focus(), 100);
+    }
+    else {
+        console.log('WARNING: No matching mode found! MODE =', MODE);
     }
 
     playAudio();
