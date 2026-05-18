@@ -344,7 +344,7 @@ function setupRound() {
             input.placeholder = "Guess the folder name";
             input.style.borderColor = "#ff0055";
         } else {
-            input.placeholder = "Type title or artist...";
+            input.placeholder = "Type title...";
         }
         
         input.onkeydown = (e) => { if(e.key === 'Enter') fadeOutAndSubmit(input.value, input); };
