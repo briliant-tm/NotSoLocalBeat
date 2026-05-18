@@ -1,6 +1,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const TOTAL_QUESTIONS = parseInt(urlParams.get('count')) || 10;
 const MODE = urlParams.get('mode') || 'CLASSIC';
+const YOUTUBE_URL = urlParams.get('url') || '';
 const IS_MULTIPLAYER = document.currentScript?.getAttribute('data-multiplayer') === 'true' || window.location.pathname === '/game/multiplayer';
 const ROOM_ID = window.sessionStorage.getItem('current_room_id') || null;
 
@@ -252,6 +253,9 @@ async function loadNextLevel() {
     const params = new URLSearchParams();
     params.append('room_id', ROOM_ID || '');
     params.append('is_multiplayer', IS_MULTIPLAYER);
+    if (YOUTUBE_URL) {
+        params.append('youtube_url', YOUTUBE_URL);
+    }
     
     fetch('/api/question?' + params)
         .then(r => r.json())

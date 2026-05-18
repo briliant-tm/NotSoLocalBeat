@@ -644,9 +644,15 @@ def get_question():
     try:
         room_id = request.args.get('room_id')
         is_multiplayer = request.args.get('is_multiplayer', 'false').lower() == 'true'
+        youtube_url = request.args.get('youtube_url', '')
         
         user = get_current_user()
         
+        # If YouTube URL is provided (singleplayer with YouTube)
+        if youtube_url:
+            return get_youtube_question_from_url(youtube_url)
+        
+        # If multiplayer room with YouTube source
         if is_multiplayer and room_id:
             room = GameRoom.query.get(int(room_id))
             if room and room.music_source == 'YOUTUBE':
@@ -743,6 +749,76 @@ def get_youtube_question(room):
             'youtube_url': selected['url'],
             'title': selected['title']
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def get_youtube_question_from_url(youtube_url):
+    """Generate question from a single YouTube URL"""
+    try:
+        if not youtube_url:
+            return jsonify({'error': 'No YouTube URL provided'}), 400
+        
+        # Check if it's a playlist
+        if 'playlist' in youtube_url.lower():
+            songs = get_youtube_playlist_songs(youtube_url, limit=50)
+            if not songs:
+                return jsonify({'error': 'Could not fetch playlist'}), 400
+            
+            selected = random.choice(songs)
+            duration = selected.get('duration', 180)
+            max_timestamp = int(duration * 0.8)
+            start_time = random.randint(0, max(0, max_timestamp - 15))
+            
+            session['quiz_url'] = selected['url']
+            session['start_time'] = start_time
+            
+            all_titles = [s['title'] for s in songs]
+            options = [selected['title']]
+            while len(options) < 4 and len(all_titles) > len(options):
+                opt = random.choice(all_titles)
+                if opt not in options:
+                    options.append(opt)
+            random.shuffle(options)
+            
+            return jsonify({
+                'clue': 'YOUTUBE PLAYLIST',
+                'options': options,
+                'mode': 'YOUTUBE',
+                'start_time': start_time,
+                'duration': min(15, duration - start_time),
+                'typing_type': 'NORMAL',
+                'source': 'YOUTUBE',
+                'youtube_url': selected['url'],
+                'title': selected['title']
+            })
+        else:
+            # Single video
+            video_info = get_youtube_video_info(youtube_url)
+            if not video_info:
+                return jsonify({'error': 'Could not fetch video'}), 400
+            
+            duration = video_info.get('duration', 180)
+            max_timestamp = int(duration * 0.8)
+            start_time = random.randint(0, max(0, max_timestamp - 15))
+            
+            session['quiz_url'] = youtube_url
+            session['start_time'] = start_time
+            
+            title = video_info.get('title', 'Unknown Video')
+            options = [title, 'Unknown Video 1', 'Unknown Video 2', 'Unknown Video 3']
+            random.shuffle(options)
+            
+            return jsonify({
+                'clue': 'YOUTUBE VIDEO',
+                'options': options,
+                'mode': 'YOUTUBE',
+                'start_time': start_time,
+                'duration': min(15, duration - start_time),
+                'typing_type': 'NORMAL',
+                'source': 'YOUTUBE',
+                'youtube_url': youtube_url,
+                'title': title
+            })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
