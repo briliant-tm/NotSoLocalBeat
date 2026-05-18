@@ -1,6 +1,6 @@
 const urlParams = new URLSearchParams(window.location.search);
-const TOTAL_QUESTIONS = parseInt(urlParams.get('count')) || 10;
-const MODE = urlParams.get('mode') || 'CLASSIC';
+const TOTAL_QUESTIONS = parseInt(window.questionCount || urlParams.get('count') || 10);
+const MODE = (window.gameMode || urlParams.get('mode') || 'CLASSIC').toUpperCase();
 const YOUTUBE_URL = urlParams.get('url') || '';
 const IS_MULTIPLAYER = document.currentScript?.getAttribute('data-multiplayer') === 'true' || window.location.pathname === '/game/multiplayer';
 const ROOM_ID = window.sessionStorage.getItem('current_room_id') || null;
