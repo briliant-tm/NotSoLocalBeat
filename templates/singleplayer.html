@@ -34,10 +34,15 @@
 
             <div class="setup-item">
                 <label>MUSIC SOURCE</label>
-                <select id="music-source" class="setup-select">
-                    <label>YOUTUBE PLAYLIST URL</label>
-                    <input type="text" id="playlist-url" placeholder="Paste YouTube Playlist URL here..." class="setup-input">
+                <select id="music-source" class="setup-select" onchange="toggleMusicSource()">
+                    <option value="YOUTUBE">YOUTUBE PLAYLIST</option>
+                    <option value="LOCAL">LOCAL FOLDER</option>
                 </select>
+            </div>
+
+            <div class="setup-item" id="youtube-url-container">
+                <label>YOUTUBE PLAYLIST URL</label>
+                <input type="text" id="playlist-url" placeholder="Paste YouTube Playlist URL here..." class="setup-input">
             </div>
 
             <button class="btn-main" onclick="startSingleplayer()">START GAME</button>
@@ -51,19 +56,46 @@
     <audio id="bgm-player" crossorigin="anonymous"></audio>
     <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
     <script>
+function toggleMusicSource() {
+    const source = document.getElementById('music-source').value;
+    const urlContainer = document.getElementById('youtube-url-container');
+    
+    if (source === 'YOUTUBE') {
+        urlContainer.style.display = 'block';
+    } else {
+        urlContainer.style.display = 'none';
+    }
+}
+
+function updateQCount() {
+    const count = document.getElementById('question-count').value;
+    document.getElementById('q-display').innerText = count;
+}
+
 function startSingleplayer() {
     const mode = document.getElementById('game-mode').value;
     const count = document.getElementById('question-count').value;
+    const source = document.getElementById('music-source').value;
     const playlistUrl = document.getElementById('playlist-url').value;
 
-    if (!playlistUrl) {
+    if (source === 'YOUTUBE' && !playlistUrl.trim()) {
         alert("Harap masukkan URL Playlist YouTube!");
         return;
     }
 
-    // Simpan URL ke session atau kirim via parameter
-    window.location.href = `/game/singleplayer?count=${count}&mode=${mode}&url=${encodeURIComponent(playlistUrl)}`;
+    let url = `/game/singleplayer?count=${count}&mode=${mode}`;
+    
+    if (source === 'YOUTUBE') {
+        url += `&url=${encodeURIComponent(playlistUrl)}`;
+    }
+    
+    window.location.href = url;
 }
+
+// Initialize on page load
+window.addEventListener('DOMContentLoaded', () => {
+    toggleMusicSource();
+});
 </script>
 </body>
 </html>
