@@ -43,7 +43,7 @@ CORS(app)
 with app.app_context():
     db.create_all()
 
-MUSIC_FOLDER = os.environ.get(r"your\music\folder\path")  # Ganti dengan path folder musik Anda
+MUSIC_FOLDER = os.environ.get('MUSIC_FOLDER', r"E:\Kakak\Music\Music")  # Ganti dengan path folder musik Anda
 CACHE_FILE = 'audio_cache.json'
 HISTORY_FILE = 'game_history.json'
 
