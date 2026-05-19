@@ -208,10 +208,14 @@ def get_youtube_playlist_songs(url, limit=50):
             for i, entry in enumerate(entries[:limit]):
                 if i >= limit:
                     break
+                upload_date = entry.get('upload_date', '')
+                year = upload_date[:4] if len(upload_date) >= 4 else 'N/A'
                 songs.append({
                     'title': entry.get('title', f'Song {i+1}'),
                     'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
-                    'duration': entry.get('duration', 180)
+                    'duration': entry.get('duration', 180),
+                    'uploader': entry.get('uploader', 'Unknown Channel'),
+                    'year': year
                 })
             
             return songs
@@ -231,10 +235,14 @@ def get_youtube_video_info(url):
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+            upload_date = info.get('upload_date', '')
+            year = upload_date[:4] if len(upload_date) >= 4 else 'N/A'
             return {
                 'title': info.get('title', 'Unknown'),
                 'duration': info.get('duration', 180),
-                'url': url
+                'url': url,
+                'uploader': info.get('uploader', 'Unknown Channel'),
+                'year': year
             }
     except:
         return None
@@ -738,8 +746,16 @@ def get_youtube_question(room):
                 options.append(opt)
         random.shuffle(options)
         
+        # Format clue with channel name, year, and duration
+        uploader = selected.get('uploader', 'Unknown Channel')
+        year = selected.get('year', 'N/A')
+        mins = duration // 60
+        secs = duration % 60
+        duration_str = f"{mins}:{secs:02d}"
+        clue = f"{uploader} | {year} | {duration_str}"
+        
         return jsonify({
-            'clue': 'YOUTUBE PLAYLIST',
+            'clue': clue,
             'options': options,
             'mode': 'YOUTUBE',
             'start_time': start_time,
@@ -780,8 +796,16 @@ def get_youtube_question_from_url(youtube_url):
                     options.append(opt)
             random.shuffle(options)
             
+            # Format clue with channel name, year, and duration
+            uploader = selected.get('uploader', 'Unknown Channel')
+            year = selected.get('year', 'N/A')
+            mins = duration // 60
+            secs = duration % 60
+            duration_str = f"{mins}:{secs:02d}"
+            clue = f"{uploader} | {year} | {duration_str}"
+            
             return jsonify({
-                'clue': 'YOUTUBE PLAYLIST',
+                'clue': clue,
                 'options': options,
                 'mode': 'YOUTUBE',
                 'start_time': start_time,
@@ -808,8 +832,17 @@ def get_youtube_question_from_url(youtube_url):
             options = [title, 'Unknown Video 1', 'Unknown Video 2', 'Unknown Video 3']
             random.shuffle(options)
             
+            # Format clue with channel name, year, and duration
+            uploader = video_info.get('uploader', 'Unknown Channel')
+            year = video_info.get('year', 'N/A')
+            duration = video_info.get('duration', 180)
+            mins = duration // 60
+            secs = duration % 60
+            duration_str = f"{mins}:{secs:02d}"
+            clue = f"{uploader} | {year} | {duration_str}"
+            
             return jsonify({
-                'clue': 'YOUTUBE VIDEO',
+                'clue': clue,
                 'options': options,
                 'mode': 'YOUTUBE',
                 'start_time': start_time,
