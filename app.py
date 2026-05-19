@@ -194,10 +194,13 @@ def get_youtube_playlist_songs(url, limit=50):
     try:
         import yt_dlp
         
+        print(f"[YOUTUBE] Fetching playlist: {url}")
+        
         ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
+            'quiet': False,
+            'no_warnings': False,
             'extract_flat': 'in_playlist',
+            'socket_timeout': 30,
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -205,18 +208,27 @@ def get_youtube_playlist_songs(url, limit=50):
             songs = []
             entries = info.get('entries', [])
             
+            print(f"[YOUTUBE] Found {len(entries)} entries in playlist")
+            
             for i, entry in enumerate(entries[:limit]):
                 if i >= limit:
                     break
-                songs.append({
-                    'title': entry.get('title', f'Song {i+1}'),
-                    'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
-                    'duration': entry.get('duration', 180)
-                })
+                if entry:
+                    song = {
+                        'title': entry.get('title', f'Song {i+1}'),
+                        'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
+                        'duration': entry.get('duration', 180),
+                        'id': entry.get('id')
+                    }
+                    songs.append(song)
+                    print(f"[YOUTUBE] Added: {song['title']}")
             
+            print(f"[YOUTUBE] Total songs extracted: {len(songs)}")
             return songs
     except Exception as e:
-        print(f"Error fetching YouTube playlist: {str(e)}")
+        print(f"[ERROR] Fetching YouTube playlist: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return []
 
 def get_youtube_video_info(url):
@@ -451,6 +463,18 @@ def create_room():
         if max_players not in [2, 4, 6]:
             return jsonify({'success': False, 'error': 'Invalid player count'}), 400
         
+        # Validate YouTube URL if needed
+        if music_source == 'YOUTUBE':
+            if not youtube_url or not youtube_url.strip():
+                return jsonify({'success': False, 'error': 'YouTube URL is required'}), 400
+            
+            # Test if we can fetch the playlist
+            print(f"[VALIDATION] Testing YouTube URL: {youtube_url}")
+            songs = get_youtube_playlist_songs(youtube_url, limit=5)
+            if not songs:
+                return jsonify({'success': False, 'error': 'Invalid or empty YouTube playlist. Check if the playlist is public and contains videos.'}), 400
+            print(f"[VALIDATION] Playlist OK, found {len(songs)} songs")
+        
         room_code = generate_room_code()
         
         room = GameRoom(
@@ -480,6 +504,9 @@ def create_room():
         })
     except Exception as e:
         db.session.rollback()
+        print(f"[ERROR] Room creation failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/room/join', methods=['POST'])
@@ -650,12 +677,20 @@ def get_question():
         
         # If YouTube URL is provided (singleplayer with YouTube)
         if youtube_url:
+            print(f"[QUESTION] Single-player YouTube: {youtube_url}")
             return get_youtube_question_from_url(youtube_url)
         
         # If multiplayer room with YouTube source
         if is_multiplayer and room_id:
+            print(f"[QUESTION] Multiplayer room: {room_id}, is_multiplayer: {is_multiplayer}")
             room = GameRoom.query.get(int(room_id))
+            if not room:
+                print(f"[ERROR] Room {room_id} not found")
+                return jsonify({'error': f'Room {room_id} not found'}), 404
+            
+            print(f"[QUESTION] Room music source: {room.music_source}, URL: {room.youtube_playlist_url}")
             if room and room.music_source == 'YOUTUBE':
+                print(f"[QUESTION] Loading YouTube question from room")
                 return get_youtube_question(room)
         
         target = get_smart_random_song()
@@ -710,17 +745,23 @@ def get_question():
             'source': 'LOCAL'
         })
     except Exception as e:
+        print(f"[ERROR] get_question: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 def get_youtube_question(room):
     """Generate question from YouTube playlist"""
     try:
         if not room.youtube_playlist_url:
+            print(f"[ERROR] Room {room.id} has no youtube_playlist_url")
             return jsonify({'error': 'No playlist configured'}), 400
         
+        print(f"[YOUTUBE] Room {room.id} playlist URL: {room.youtube_playlist_url}")
         songs = get_youtube_playlist_songs(room.youtube_playlist_url, limit=50)
         if not songs:
-            return jsonify({'error': 'Could not fetch playlist'}), 400
+            print(f"[ERROR] Failed to fetch songs from: {room.youtube_playlist_url}")
+            return jsonify({'error': 'Could not fetch playlist - may be private or removed'}), 400
         
         selected = random.choice(songs)
         duration = selected.get('duration', 180)
@@ -760,9 +801,11 @@ def get_youtube_question_from_url(youtube_url):
         
         # Check if it's a playlist
         if 'playlist' in youtube_url.lower():
+            print(f"[YOUTUBE] Processing playlist URL: {youtube_url}")
             songs = get_youtube_playlist_songs(youtube_url, limit=50)
             if not songs:
-                return jsonify({'error': 'Could not fetch playlist'}), 400
+                print(f"[ERROR] Could not extract songs from playlist")
+                return jsonify({'error': 'Could not fetch playlist - may be private, removed, or empty'}), 400
             
             selected = random.choice(songs)
             duration = selected.get('duration', 180)
@@ -982,15 +1025,17 @@ def submit_room_score(room_id):
         }), 500
     
 @app.route('/api/room/<int:room_id>/leaderboard')
-@require_login
 def room_leaderboard(room_id):
 
     try:
-
+        print(f"[LEADERBOARD] Fetching leaderboard for room {room_id}")
+        
         room = GameRoom.query.get(room_id)
 
         if not room:
+            print(f"[LEADERBOARD] Room {room_id} not found")
             return jsonify({
+                'success': False,
                 'error': 'Room not found'
             }), 404
 
@@ -1001,22 +1046,30 @@ def room_leaderboard(room_id):
             .all()
         )
 
+        print(f"[LEADERBOARD] Found {len(scores)} scores for room {room_id}")
+
         leaderboard = []
 
         for s in scores:
-
-            leaderboard.append({
-                'username': s.user.username,
-                'score': s.score
-            })
+            if s.user:
+                leaderboard.append({
+                    'username': s.user.username,
+                    'score': s.score
+                })
+                print(f"[LEADERBOARD] Added: {s.user.username} - {s.score}")
 
         return jsonify({
-            'leaderboard': leaderboard
+            'success': True,
+            'leaderboard': leaderboard,
+            'room_code': room.room_code
         })
 
     except Exception as e:
-
+        print(f"[ERROR] Leaderboard endpoint: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
+            'success': False,
             'error': str(e)
         }), 500
     

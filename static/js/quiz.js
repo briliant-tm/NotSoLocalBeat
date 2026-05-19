@@ -241,17 +241,25 @@ function startMultiplayerGame() {
 
 async function loadNextLevel() {
     if (currentQ >= TOTAL_QUESTIONS) {
+        console.log('[ENDGAME] Quiz completed. IS_MULTIPLAYER:', IS_MULTIPLAYER, 'ROOM_ID:', ROOM_ID);
+        
         document.getElementById('final-score').innerText = score;
         
         if (IS_MULTIPLAYER && room) {
+            console.log('[ENDGAME] Setting initial leaderboard header');
             const leaderboard = document.getElementById('final-leaderboard');
-            leaderboard.innerHTML = '<div style="font-size: 0.9rem; margin-top: 10px;">ROOM: ' + room.room_code + '</div>';
+            leaderboard.innerHTML = '<div style="font-size: 0.9rem; margin-top: 10px;">LOADING SCORES...</div>';
+        } else {
+            console.log('[ENDGAME] Not multiplayer, skipping leaderboard');
         }
         
+        console.log('[ENDGAME] Submitting final score...');
         await submitFinalScore();
 
+        console.log('[ENDGAME] Loading leaderboard...');
         await loadLeaderboard();
 
+        console.log('[ENDGAME] Showing game over screen');
         overlayOver.style.display = 'flex';
         clearInterval(pollInterval);
         return;
@@ -276,10 +284,12 @@ async function loadNextLevel() {
         .then(r => r.json())
         .then(data => {
             if (data.error) {
-                alert('Error loading question');
+                console.error('Question load error:', data.error);
+                alert('Error loading question: ' + data.error);
                 return;
             }
             nextData = data;
+            console.log('[QUESTION] Loaded:', nextData);
             if (nextData.source !== 'YOUTUBE') {
                 audio.src = `/stream_audio?type=quiz&t=${Date.now()}`;
                 audio.load();
@@ -287,7 +297,7 @@ async function loadNextLevel() {
         })
         .catch(e => {
             console.error('Error:', e);
-            alert('Error loading question');
+            alert('Error loading question: ' + e.message);
         });
 
     const interval = setInterval(() => {
@@ -600,12 +610,15 @@ function autoReadyHost() {
 
 async function submitFinalScore() {
 
-    if (!IS_MULTIPLAYER || !ROOM_ID)
+    if (!IS_MULTIPLAYER || !ROOM_ID) {
+        console.log('[SCORE] Skipped - not multiplayer');
         return;
+    }
 
     try {
+        console.log('[SCORE] Submitting:', { room_id: ROOM_ID, username: window.currentUsername, score: score });
 
-        await fetch(
+        const res = await fetch(
             `/api/room/${ROOM_ID}/score`,
             {
                 method: 'POST',
@@ -621,10 +634,13 @@ async function submitFinalScore() {
             }
         );
 
+        const data = await res.json();
+        console.log('[SCORE] Response:', data);
+
     } catch(e) {
 
         console.error(
-            'Score submit failed',
+            '[SCORE] Failed:',
             e
         );
     }
@@ -632,49 +648,82 @@ async function submitFinalScore() {
 
 async function loadLeaderboard() {
 
-    if (!IS_MULTIPLAYER || !ROOM_ID)
+    if (!IS_MULTIPLAYER || !ROOM_ID) {
+        console.log('[LEADERBOARD] Skipped - not multiplayer or no room ID');
         return;
+    }
+
+    // Wait a bit to ensure scores are saved
+    await new Promise(r => setTimeout(r, 500));
 
     try {
-
+        console.log('[LEADERBOARD] Fetching from /api/room/' + ROOM_ID + '/leaderboard');
+        
         const res = await fetch(
             `/api/room/${ROOM_ID}/leaderboard`
         );
 
+        console.log('[LEADERBOARD] Response status:', res.status);
+        
+        if (!res.ok) {
+            console.error('[LEADERBOARD] API returned error status:', res.status);
+            const errorData = await res.json();
+            console.error('[LEADERBOARD] Error data:', errorData);
+            return;
+        }
+        
         const data = await res.json();
+        console.log('[LEADERBOARD] Response data:', data);
 
-        const leaderboard =
+        if (!data.success) {
+            console.error('[LEADERBOARD] API returned success=false:', data.error || data);
+            return;
+        }
+
+        const container =
             document.getElementById(
                 'final-leaderboard'
             );
 
-        leaderboard.innerHTML = '';
+        if (!container) {
+            console.error('[LEADERBOARD] Container not found!');
+            return;
+        }
 
-        data.leaderboard.forEach(
-            (player, index) => {
+        console.log('[LEADERBOARD] Container found, updating...');
 
-            const div =
-                document.createElement('div');
+        let html = `
+            <div style="border-top: 1px solid #666; padding-top: 15px; margin-top: 15px;">
+                <div style="font-size: 0.8rem; color: #888; margin-bottom: 10px;">ROOM: ${data.room_code}</div>
+                <div style="font-size: 1rem; font-weight: bold; margin-bottom: 10px; color: #fff;">FINAL SCORES</div>
+        `;
 
-            div.style.margin =
-                '10px 0';
+        if (!data.leaderboard || data.leaderboard.length === 0) {
+            html += '<div style="color: #888;">No scores recorded yet</div>';
+        } else {
+            data.leaderboard.forEach((player, index) => {
+                let medal = '';
+                if (index === 0) medal = '🥇 ';
+                else if (index === 1) medal = '🥈 ';
+                else if (index === 2) medal = '🥉 ';
 
-            div.style.fontSize =
-                '1rem';
+                html += `
+                    <div style="margin: 8px 0; font-size: 0.95rem; padding: 8px; background: rgba(100,200,255,0.1); border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${medal}#${index + 1} ${player.username}</span>
+                        <span style="color: #4fc3f7; font-weight: bold;">${player.score}</span>
+                    </div>
+                `;
+            });
+        }
 
-            div.innerHTML = `
-                #${index + 1}
-                ${player.username}
-                - ${player.score}
-            `;
-
-            leaderboard.appendChild(div);
-        });
+        html += '</div>';
+        container.innerHTML = html;
+        console.log('[LEADERBOARD] Leaderboard loaded successfully');
 
     } catch(e) {
 
         console.error(
-            'Leaderboard failed',
+            '[LEADERBOARD] Error:',
             e
         );
     }
